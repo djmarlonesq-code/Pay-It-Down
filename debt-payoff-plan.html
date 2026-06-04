@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Debt Payoff Plan</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a26;
+    --border:#2a2a3d;--accent:#00e5a0;--accent2:#ff6b6b;
+    --accent3:#ffd166;--text:#e8e8f0;--muted:#6b6b8a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;padding:24px 16px 60px;}
+  .grain{position:fixed;inset:0;pointer-events:none;z-index:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");opacity:0.4;}
+  .wrap{max-width:820px;margin:0 auto;position:relative;z-index:1;}
+
+  header{margin-bottom:32px;}
+  .tag{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+  .tag::before{content:'';display:block;width:20px;height:1px;background:var(--accent);}
+  h1{font-size:clamp(26px,6vw,40px);font-weight:800;line-height:1.1;letter-spacing:-.02em;}
+  h1 span{color:var(--accent);}
+  .subtitle{color:var(--muted);font-size:13px;margin-top:6px;font-family:'DM Mono',monospace;}
+
+  .collapsible-section{margin-bottom:24px;}
+  .col-header{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;margin-bottom:14px;}
+  .col-header-label{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap;}
+  .col-line{flex:1;height:1px;background:var(--border);}
+  .col-chevron{font-size:11px;color:var(--muted);transition:transform .25s;font-family:'DM Mono',monospace;flex-shrink:0;}
+  .col-header.collapsed .col-chevron{transform:rotate(-90deg);}
+  .col-body{display:block;}
+  .col-body.hidden{display:none;}
+
+  .edit-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+  .edit-panel-header{padding:16px 20px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);}
+  .edit-panel-header:hover{background:var(--surface2);}
+  .edit-panel-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:10px;}
+  .edit-panel-title .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block;flex-shrink:0;}
+  .edit-toggle-hint{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-shrink:0;}
+  .chevron-icon{transition:transform .3s;display:inline-block;}
+  .edit-panel-body{padding:20px;display:none;}
+  .edit-panel-body.open{display:block;}
+  .live-badge{font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.2);padding:2px 8px;border-radius:99px;margin-left:8px;display:none;}
+  .live-badge.show{display:inline-block;}
+
+  .budget-row{display:flex;align-items:flex-end;gap:16px;margin-bottom:24px;flex-wrap:wrap;}
+  .budget-field{display:flex;flex-direction:column;gap:5px;}
+  .field-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-family:'DM Mono',monospace;}
+  .field-input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:14px;width:150px;outline:none;transition:border-color .2s;}
+  .field-input:focus{border-color:var(--accent);}
+  .field-input.wide{width:170px;}
+
+  .card-editor-list{display:flex;flex-direction:column;gap:14px;}
+  .card-edit-row{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;}
+  .card-edit-name{font-size:14px;font-weight:700;margin-bottom:3px;}
+  .card-edit-meta{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .util-chip{display:inline-block;font-family:'DM Mono',monospace;font-size:11px;padding:2px 8px;border-radius:99px;font-weight:500;}
+  .card-edit-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media(min-width:480px){.card-edit-fields{grid-template-columns:repeat(3,1fr);}}
+  @media(min-width:640px){.card-edit-fields{grid-template-columns:repeat(5,1fr);}}
+  .card-edit-field{display:flex;flex-direction:column;gap:4px;}
+  .card-edit-field label{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-family:'DM Mono',monospace;}
+  .card-edit-field input{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;width:100%;outline:none;transition:border-color .2s;}
+  .card-edit-field input:focus{border-color:var(--accent);}
+
+  .apply-btn{margin-top:20px;background:var(--accent);color:#000;border:none;border-radius:8px;padding:11px 26px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.03em;transition:opacity .2s;width:100%;}
+  .apply-btn:hover{opacity:.85;}
+  .apply-btn:active{opacity:.7;}
+
+  .guide{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:18px;}
+  .guide-step{display:flex;gap:14px;}
+  .guide-num{width:26px;height:26px;border-radius:50%;background:rgba(0,229,160,.12);border:1px solid rgba(0,229,160,.3);color:var(--accent);font-family:'DM Mono',monospace;font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+  .guide-content h4{font-size:13px;font-weight:700;margin-bottom:4px;}
+  .guide-content p{font-size:12px;color:var(--muted);line-height:1.65;font-family:'DM Mono',monospace;}
+  .guide-content p strong{color:var(--text);}
+
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;}
+  .stat-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:6px;}
+  .stat-val{font-size:22px;font-weight:700;}
+  .stat-val.green{color:var(--accent);}
+  .stat-val.red{color:var(--accent2);}
+  .stat-val.yellow{color:var(--accent3);}
+
+  .util-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px;}
+  .util-meta{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;}
+  .util-name{font-size:13px;font-weight:600;}
+  .util-pct{font-family:'DM Mono',monospace;font-size:12px;}
+  .util-bar-bg{height:6px;background:var(--border);border-radius:99px;overflow:hidden;}
+  .util-bar-fill{height:100%;border-radius:99px;transition:width .5s ease;}
+
+  .strategy{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;padding:16px 20px;font-size:13px;line-height:1.7;}
+  .strategy strong{color:var(--accent);}
+
+  .paycheck-list{display:flex;flex-direction:column;gap:14px;}
+  .paycheck-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .2s;}
+  .paycheck-card:hover{border-color:#3a3a55;}
+  .pc-header{padding:14px 18px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;gap:12px;}
+  .pc-header:hover{background:var(--surface2);}
+  .pc-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .pc-num{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);background:var(--border);border-radius:6px;padding:3px 8px;white-space:nowrap;}
+  .pc-date{font-size:15px;font-weight:700;}
+  .pc-badge{font-size:10px;font-family:'DM Mono',monospace;padding:3px 8px;border-radius:99px;background:var(--accent);color:#000;font-weight:500;white-space:nowrap;}
+  .pc-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  .pc-total{font-family:'DM Mono',monospace;font-size:14px;color:var(--accent);font-weight:500;}
+  .chevron{color:var(--muted);font-size:14px;transition:transform .3s;}
+  .open .chevron{transform:rotate(180deg);}
+  .pc-body{display:none;padding:0 18px 18px;border-top:1px solid var(--border);}
+  .pc-body.visible{display:block;}
+
+  .pay-rows{margin-top:14px;display:flex;flex-direction:column;gap:10px;}
+  .pay-row{background:var(--surface2);border-radius:10px;padding:12px 14px;}
+  .pay-row-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+  .pay-row-name{font-size:13px;font-weight:600;}
+  .pay-row-apr{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px;}
+  .pay-row-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  @media(max-width:380px){.pay-row-stats{grid-template-columns:repeat(2,1fr);}}
+  .pay-stat-label{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:2px;}
+  .pay-stat-val{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;}
+  .pay-stat-val.green{color:var(--accent);}
+  .pay-stat-val.red{color:var(--accent2);}
+  .pay-stat-val.muted{color:var(--muted);}
+
+  .pill{display:inline-block;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:99px;font-family:'DM Mono',monospace;font-weight:500;}
+  .pill.focus{background:rgba(0,229,160,.15);color:var(--accent);}
+  .pill.min{background:rgba(255,107,107,.12);color:var(--accent2);}
+  .pill.payoff{background:var(--accent);color:#000;}
+
+  .pc-footer{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
+  .pc-footer span{color:var(--text);}
+
+  .util-after{margin-top:14px;}
+  .util-after-title{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:10px;}
+  .mini-util-row{display:flex;align-items:center;gap:10px;margin-bottom:7px;}
+  .mini-util-name{width:155px;font-weight:600;font-size:12px;flex-shrink:0;}
+  .mini-util-bar-bg{flex:1;height:4px;background:var(--border);border-radius:99px;overflow:hidden;}
+  .mini-util-bar-fill{height:100%;border-radius:99px;}
+  .mini-util-pct{font-family:'DM Mono',monospace;font-size:11px;width:40px;text-align:right;flex-shrink:0;}
+
+  .payoff-celebration{background:linear-gradient(135deg,rgba(0,229,160,.08),rgba(0,229,160,.02));border:1px solid rgba(0,229,160,.3);border-radius:12px;padding:20px;text-align:center;margin-top:24px;}
+  .payoff-celebration h3{font-size:20px;font-weight:800;color:var(--accent);margin-bottom:6px;}
+  .payoff-celebration p{color:var(--muted);font-size:13px;font-family:'DM Mono',monospace;}
+
+  .note{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:24px;line-height:1.8;border-top:1px solid var(--border);padding-top:16px;}
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div class="wrap">
+
+<header>
+  <div class="tag">Debt Payoff Plan</div>
+  <h1>Pay It <span>Down.</span></h1>
+  <div class="subtitle">Hybrid strategy &middot; Bi-weekly &middot; Starting 06/05/2026</div>
+</header>
+
+<!-- UTILIZATION — expanded by default -->
+<div class="collapsible-section">
+  <div class="col-header" data-target="secUtil">
+    <span class="col-header-label">Current Utilization</span>
+    <div class="col-line"></div>
+    <span class="col-chevron">&#9662;</span>
+  </div>
+  <div class="col-body" id="secUtil">
+    <div class="util-section" id="utilSection"></div>
+  </div>
+</div>
+
+<!-- PAYCHECK PLAN — expanded by default -->
+<div class="collapsible-section">
+  <div class="col-header" data-target="secPlan">
+    <span class="col-header-label">Paycheck-by-Paycheck Plan</span>
+    <div class="col-line"></div>
+    <span class="col-chevron">&#9662;</span>
+  </div>
+  <div class="col-body" id="secPlan">
+    <div class="paycheck-list" id="paycheckList"></div>
+    <div class="payoff-celebration" id="celebration"></div>
+  </div>
+</div>
+
+<!-- HOW TO USE — collapsed by default -->
+<div class="collapsible-section">
+  <div class="col-header collapsed" data-target="secHowTo">
+    <span class="col-header-label">How to Use This Plan</span>
+    <div class="col-line"></div>
+    <span class="col-chevron">&#9662;</span>
+  </div>
+  <div class="col-body hidden" id="secHowTo">
+    <div class="guide">
+      <div class="guide-step">
+        <div class="guide-num">1</div>
+        <div class="guide-content">
+          <h4>Find your current paycheck period</h4>
+          <p>Tap <strong>Pay 01</strong> to expand it. Each card shows exactly how much to pay that period. The <strong>FOCUS</strong> card gets the bulk of your $650. All others get their minimum payment only.</p>
+        </div>
+      </div>
+      <div class="guide-step">
+        <div class="guide-num">2</div>
+        <div class="guide-content">
+          <h4>Make your payments</h4>
+          <p>Pay each card the amount shown. The <strong>FOCUS</strong> card is the priority &mdash; pay that first. <strong>MIN</strong> payments keep other cards current and avoid late fees. <strong>PAID OFF</strong> means that card hits zero this paycheck.</p>
+        </div>
+      </div>
+      <div class="guide-step">
+        <div class="guide-num">3</div>
+        <div class="guide-content">
+          <h4>Recording a payment you already made</h4>
+          <p>Open <strong>Balances, Limits &amp; APRs</strong> above. Find the card and enter the amount already paid in <strong>Extra Paid ($)</strong>. Hit <strong>Recalculate Plan</strong> and the schedule updates with your reduced balance.</p>
+        </div>
+      </div>
+      <div class="guide-step">
+        <div class="guide-num">4</div>
+        <div class="guide-content">
+          <h4>Updating balances after a statement</h4>
+          <p>After your statement closes, open the editor and update <strong>Balance ($)</strong> to your current statement balance. Hit Recalculate &mdash; the entire payoff timeline adjusts instantly.</p>
+        </div>
+      </div>
+      <div class="guide-step">
+        <div class="guide-num">5</div>
+        <div class="guide-content">
+          <h4>Paying extra one paycheck</h4>
+          <p>Have extra cash? Bump up <strong>Budget per Paycheck</strong> temporarily and recalculate, then set it back next time. Or enter the extra in <strong>Extra Paid</strong> on your FOCUS card &mdash; same result.</p>
+        </div>
+      </div>
+      <div class="guide-step">
+        <div class="guide-num">6</div>
+        <div class="guide-content">
+          <h4>Understanding the pill labels</h4>
+          <p><strong style="color:#00e5a0">FOCUS</strong> &mdash; max payment this period. &nbsp;<strong style="color:#ff6b6b">MIN</strong> &mdash; minimum only, keeping it current. &nbsp;<strong style="color:#00e5a0">PAID OFF</strong> &mdash; card hits zero this paycheck. Freed budget rolls automatically to the next card in line.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUMMARY — collapsed by default -->
+<div class="collapsible-section">
+  <div class="col-header collapsed" data-target="secSummary">
+    <span class="col-header-label">Summary</span>
+    <div class="col-line"></div>
+    <span class="col-chevron">&#9662;</span>
+  </div>
+  <div class="col-body hidden" id="secSummary">
+    <div class="summary-grid" id="summaryGrid"></div>
+  </div>
+</div>
+
+<!-- CARD DATA — collapsed by default -->
+<div class="collapsible-section">
+  <div class="col-header collapsed" data-target="secCardData">
+    <span class="col-header-label">Card Data</span>
+    <div class="col-line"></div>
+    <span class="col-chevron">&#9662;</span>
+  </div>
+  <div class="col-body hidden" id="secCardData">
+    <div class="edit-panel">
+      <div class="edit-panel-header" id="editToggle">
+        <div class="edit-panel-title">
+          <span class="dot"></span>
+          Balances, Limits &amp; APRs
+          <span class="live-badge" id="liveBadge">UPDATED</span>
+        </div>
+        <div class="edit-toggle-hint">
+          <span id="editHint">tap to edit</span>
+          <span class="chevron-icon" id="editChevron">&#9662;</span>
+        </div>
+      </div>
+      <div class="edit-panel-body" id="editBody">
+        <div class="budget-row">
+          <div class="budget-field">
+            <div class="field-label">Budget per Paycheck ($)</div>
+            <input class="field-input" id="inputBudget" type="number" step="0.01" value="650.00">
+          </div>
+          <div class="budget-field">
+            <div class="field-label">First Paycheck Date</div>
+            <input class="field-input wide" id="inputStartDate" type="date" value="2026-06-05">
+          </div>
+        </div>
+        <div class="card-editor-list" id="cardEditorBody"></div>
+        <button class="apply-btn" id="applyBtn">&#8635; Recalculate Plan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STRATEGY — collapsed by default -->
+<div class="collapsible-section">
+  <div class="col-header collapsed" data-target="secStrategy">
+    <span class="col-header-label">Strategy</span>
+    <div class="col-line"></div>
+    <span class="col-chevron">&#9662;</span>
+  </div>
+  <div class="col-body hidden" id="secStrategy">
+    <div class="strategy" id="strategyBox"></div>
+  </div>
+</div>
+
+<div class="note">
+  * Interest estimated using daily periodic rate x 14 days applied to opening balance each period.<br>
+  * "Extra Paid" reduces the opening balance before the plan runs &mdash; use it to record lump sums already paid.<br>
+  * Minimum payments applied to non-focus cards. Surplus waterfalls down the priority chain automatically.<br>
+  * After full payoff, redirect your $<span id="notebudget">650</span>/paycheck to savings or your next goal.
+</div>
+
+</div>
+<script>
+var cardData=[
+  {key:'apple',    name:'Apple Card',         apr:25.49,limit:4500,balance:1700.74,extra:0,min:25},
+  {key:'creditone',name:'Credit One 5348',    apr:27.49,limit:1050,balance:230.10, extra:0,min:25},
+  {key:'venmo',    name:'Venmo Card',         apr:27.74,limit:7500,balance:1275.58,extra:0,min:25},
+  {key:'capone',   name:'Cap One Quicksilver',apr:28.49,limit:5000,balance:394.95, extra:0,min:25},
+];
+var BUDGET=650;
+var START_DATE=new Date('2026-06-05');
+var DAYS=14;
+
+function totalLimit(){return cardData.reduce(function(s,c){return s+c.limit;},0);}
+function interest14(bal,aprPct){return +(bal*(aprPct/100/365)*DAYS).toFixed(2);}
+function addDays(d,n){var x=new Date(d);x.setDate(x.getDate()+n);return x;}
+function fmtDate(d){return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+function fmtMoney(n){return '$'+Math.max(0,n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+function utilColor(p){return p>30?'#ff6b6b':p>15?'#ffd166':'#00e5a0';}
+
+function getPriorityOrder(cards){
+  var apple=cards.find(function(c){return c.key==='apple';});
+  var rest=cards.filter(function(c){return c.key!=='apple'&&c.balance>0;}).sort(function(a,b){return b.apr-a.apr;});
+  var result=[];
+  if(apple&&apple.balance>0)result.push(apple.key);
+  rest.forEach(function(c){result.push(c.key);});
+  cards.filter(function(c){return c.balance<=0&&c.key!=='apple';}).forEach(function(c){result.push(c.key);});
+  return result;
+}
+
+function buildSchedule(){
+  var bals={};
+  cardData.forEach(function(c){bals[c.key]=Math.max(0,+(c.balance-c.extra).toFixed(2));});
+  var order=getPriorityOrder(cardData.map(function(c){return Object.assign({},c,{balance:bals[c.key]});}));
+  var cardMap={};cardData.forEach(function(c){cardMap[c.key]=c;});
+  var periods=[];var date=new Date(START_DATE);
+  for(var i=0;i<30;i++){
+    var totalDebt=cardData.reduce(function(s,c){return s+bals[c.key];},0);
+    if(totalDebt<0.005)break;
+    var periodInterest={};
+    cardData.forEach(function(c){
+      periodInterest[c.key]=bals[c.key]>0?interest14(bals[c.key],c.apr):0;
+      bals[c.key]=+(bals[c.key]+periodInterest[c.key]).toFixed(2);
+    });
+    var focusKey=order.find(function(k){return bals[k]>0.005;});
+    var payments={};cardData.forEach(function(c){payments[c.key]=0;});
+    var remaining=BUDGET;
+    order.forEach(function(k){
+      if(k!==focusKey&&bals[k]>0.005){
+        var m=Math.min(cardMap[k].min,bals[k]);payments[k]=m;remaining=+(remaining-m).toFixed(2);
+      }
+    });
+    for(var oi=0;oi<order.length;oi++){
+      var k=order[oi];if(remaining<0.005)break;if(bals[k]<0.005)continue;
+      var canPay=+(Math.min(remaining,bals[k]-payments[k])).toFixed(2);
+      if(canPay>0.005){payments[k]=+(payments[k]+canPay).toFixed(2);remaining=+(remaining-canPay).toFixed(2);}
+    }
+    cardData.forEach(function(c){bals[c.key]=+Math.max(0,bals[c.key]-payments[c.key]).toFixed(2);});
+    var totalPaid=+Object.values(payments).reduce(function(a,b){return a+b;},0).toFixed(2);
+    periods.push({date:new Date(date),payments:payments,interest:periodInterest,balsAfter:Object.assign({},bals),focusKey:focusKey,totalPaid:totalPaid,order:order});
+    date=addDays(date,14);
+  }
+  return periods;
+}
+
+function renderEditor(){
+  var body=document.getElementById('cardEditorBody');body.innerHTML='';
+  cardData.forEach(function(c,i){
+    var util=c.limit>0?Math.max(0,(c.balance-c.extra)/c.limit*100):0;
+    var uColor=utilColor(util);
+    var div=document.createElement('div');div.className='card-edit-row';
+    div.innerHTML=
+      '<div class="card-edit-name">'+c.name+'</div>'+
+      '<div class="card-edit-meta"><span id="aprTxt_'+i+'">'+c.apr+'% APR</span> &middot; <span class="util-chip" id="utilChip_'+i+'" style="background:'+uColor+'22;color:'+uColor+'">'+util.toFixed(1)+'% util</span></div>'+
+      '<div class="card-edit-fields">'+
+        '<div class="card-edit-field"><label>Balance ($)</label><input type="number" step="0.01" min="0" value="'+c.balance.toFixed(2)+'" data-i="'+i+'" data-field="balance"></div>'+
+        '<div class="card-edit-field"><label>Extra Paid ($)</label><input type="number" step="0.01" min="0" value="'+c.extra.toFixed(2)+'" placeholder="0.00" data-i="'+i+'" data-field="extra"></div>'+
+        '<div class="card-edit-field"><label>Credit Limit ($)</label><input type="number" step="1" min="1" value="'+c.limit+'" data-i="'+i+'" data-field="limit"></div>'+
+        '<div class="card-edit-field"><label>APR (%)</label><input type="number" step="0.01" min="0" value="'+c.apr+'" data-i="'+i+'" data-field="apr"></div>'+
+        '<div class="card-edit-field"><label>Min Payment ($)</label><input type="number" step="1" min="0" value="'+c.min+'" data-i="'+i+'" data-field="min"></div>'+
+      '</div>';
+    body.appendChild(div);
+  });
+  body.querySelectorAll('input').forEach(function(inp){
+    inp.addEventListener('input',function(){
+      var i=+inp.dataset.i,field=inp.dataset.field;
+      cardData[i][field]=parseFloat(inp.value)||0;
+      var util=cardData[i].limit>0?Math.max(0,(cardData[i].balance-cardData[i].extra)/cardData[i].limit*100):0;
+      var uColor=utilColor(util);
+      var chip=document.getElementById('utilChip_'+i);
+      if(chip){chip.style.background=uColor+'22';chip.style.color=uColor;chip.textContent=util.toFixed(1)+'% util';}
+      if(field==='apr'){var at=document.getElementById('aprTxt_'+i);if(at)at.textContent=cardData[i].apr+'% APR';}
+    });
+  });
+  document.getElementById('inputBudget').value=BUDGET.toFixed(2);
+}
+
+function renderSummary(schedule){
+  var totalDebt=cardData.reduce(function(s,c){return s+Math.max(0,c.balance-c.extra);},0);
+  var overallUtil=totalLimit()>0?(totalDebt/totalLimit()*100):0;
+  var last=schedule[schedule.length-1];
+  var payoffDate=last?fmtDate(last.date):'--';
+  var totalInterest=schedule.reduce(function(s,p){return s+Object.values(p.interest).reduce(function(a,b){return a+b;},0);},0);
+  document.getElementById('summaryGrid').innerHTML=
+    '<div class="stat-card"><div class="stat-label">Total Debt</div><div class="stat-val red">'+fmtMoney(totalDebt)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Budget / Paycheck</div><div class="stat-val green">'+fmtMoney(BUDGET)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Overall Utilization</div><div class="stat-val yellow">'+overallUtil.toFixed(1)+'%</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Paychecks to Freedom</div><div class="stat-val">'+schedule.length+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Est. Total Interest</div><div class="stat-val red">'+fmtMoney(totalInterest)+'</div></div>'+
+    '<div class="stat-card"><div class="stat-label">Est. Payoff Date</div><div class="stat-val">'+payoffDate+'</div></div>';
+  document.getElementById('notebudget').textContent=BUDGET.toFixed(0);
+}
+
+function renderUtilBars(){
+  var html='';
+  cardData.filter(function(c){return c.balance>0;}).forEach(function(c){
+    var util=c.limit>0?Math.max(0,(c.balance-c.extra)/c.limit*100):0;
+    var uColor=utilColor(util);
+    var warn=util>30?' &mdash; &#9888; Over 30%':'';
+    html+='<div><div class="util-meta"><div class="util-name">'+c.name+'</div><div class="util-pct" style="color:'+uColor+'">'+util.toFixed(1)+'%'+warn+'</div></div><div class="util-bar-bg"><div class="util-bar-fill" style="width:'+Math.min(util,100)+'%;background:'+uColor+'"></div></div></div>';
+  });
+  document.getElementById('utilSection').innerHTML=html;
+}
+
+function renderStrategy(schedule){
+  if(!schedule.length)return;
+  var order=schedule[0].order.filter(function(k){return cardData.find(function(c){return c.key===k&&c.balance>0;});});
+  var names=order.map(function(k){var c=cardData.find(function(c){return c.key===k;});return c?c.name:null;}).filter(Boolean);
+  document.getElementById('strategyBox').innerHTML='<strong>Strategy: Hybrid (Utilization-First + Avalanche)</strong><br>Apple Card leads &mdash; highest utilization, brought under 30% fast. Remaining cards follow APR descending: '+names.slice(1).join(' &rarr; ')+'. Full '+fmtMoney(BUDGET)+' deployed every paycheck. Surplus waterfalls automatically to next priority card.';
+}
+
+function renderSchedule(schedule){
+  var cardMap={};cardData.forEach(function(c){cardMap[c.key]=c;});
+  var container=document.getElementById('paycheckList');container.innerHTML='';
+  schedule.forEach(function(period,idx){
+    var el=document.createElement('div');el.className='paycheck-card';
+    var badge='';
+    period.order.forEach(function(k){
+      if(period.balsAfter[k]<0.005&&period.payments[k]>0.005)
+        badge='<div class="pc-badge">&#10003; '+cardMap[k].name.split(' ')[0]+' Paid Off</div>';
+    });
+    var payRows='';
+    period.order.forEach(function(k){
+      var c=cardMap[k];if(!c)return;
+      var paid=period.payments[k]||0,bal=period.balsAfter[k]||0,int=period.interest[k]||0;
+      if(paid<0.005&&bal<0.005)return;
+      var isPayoff=bal<0.005&&paid>0.005;
+      var isAboveMin=paid>(c.min+0.01)||k===period.focusKey;
+      var pill=isPayoff?'<span class="pill payoff">PAID OFF</span>':isAboveMin?'<span class="pill focus">FOCUS</span>':'<span class="pill min">MIN</span>';
+      var utilPct=c.limit>0&&bal>0?(bal/c.limit*100):0;
+      var uColor=utilColor(utilPct);
+      payRows+=
+        '<div class="pay-row">'+
+          '<div class="pay-row-top">'+
+            '<div><div class="pay-row-name">'+c.name+'</div><div class="pay-row-apr">'+c.apr+'% APR</div></div>'+
+            pill+
+          '</div>'+
+          '<div class="pay-row-stats">'+
+            '<div><div class="pay-stat-label">Payment</div><div class="pay-stat-val green">'+fmtMoney(paid)+'</div></div>'+
+            '<div><div class="pay-stat-label">Interest</div><div class="pay-stat-val red">+'+fmtMoney(int)+'</div></div>'+
+            '<div><div class="pay-stat-label">Bal After</div><div class="pay-stat-val muted">'+fmtMoney(bal)+'</div></div>'+
+            '<div><div class="pay-stat-label">Util After</div><div class="pay-stat-val" style="color:'+uColor+'">'+utilPct.toFixed(1)+'%</div></div>'+
+          '</div>'+
+        '</div>';
+    });
+    var utilBars='';
+    period.order.forEach(function(k){
+      var c=cardMap[k];if(!c)return;
+      var bal=period.balsAfter[k]||0,pct=c.limit>0?(bal/c.limit*100):0,uColor=utilColor(pct);
+      utilBars+='<div class="mini-util-row"><div class="mini-util-name">'+c.name+'</div><div class="mini-util-bar-bg"><div class="mini-util-bar-fill" style="width:'+Math.min(pct,100).toFixed(1)+'%;background:'+uColor+'"></div></div><div class="mini-util-pct" style="color:'+uColor+'">'+pct.toFixed(1)+'%</div></div>';
+    });
+    var totalDebtAfter=cardData.reduce(function(s,c){return s+(period.balsAfter[c.key]||0);},0);
+    var overallUtil=totalLimit()>0?(totalDebtAfter/totalLimit()*100):0;
+    el.innerHTML=
+      '<div class="pc-header">'+
+        '<div class="pc-left">'+
+          '<div class="pc-num">Pay '+String(idx+1).padStart(2,'0')+'</div>'+
+          '<div class="pc-date">'+fmtDate(period.date)+'</div>'+badge+
+        '</div>'+
+        '<div class="pc-right"><div class="pc-total">'+fmtMoney(period.totalPaid)+'</div><div class="chevron">&#9662;</div></div>'+
+      '</div>'+
+      '<div class="pc-body">'+
+        '<div class="pay-rows">'+payRows+'</div>'+
+        '<div class="pc-footer"><div>Total paid: <span>'+fmtMoney(period.totalPaid)+'</span></div><div>Remaining: <span>'+fmtMoney(totalDebtAfter)+'</span></div><div>Overall util: <span style="color:'+utilColor(overallUtil)+'">'+overallUtil.toFixed(1)+'%</span></div></div>'+
+        '<div class="util-after"><div class="util-after-title">Utilization After This Paycheck</div>'+utilBars+'</div>'+
+      '</div>';
+    el.querySelector('.pc-header').addEventListener('click',function(){
+      var b=el.querySelector('.pc-body'),open=b.classList.toggle('visible');
+      el.querySelector('.pc-header').classList.toggle('open',open);
+    });
+    if(idx===0){el.querySelector('.pc-body').classList.add('visible');el.querySelector('.pc-header').classList.add('open');}
+    container.appendChild(el);
+  });
+  var last=schedule[schedule.length-1];
+  var totalInterest=schedule.reduce(function(s,p){return s+Object.values(p.interest).reduce(function(a,b){return a+b;},0);},0);
+  document.getElementById('celebration').innerHTML=last?'<h3>&#127919; Debt Free by '+fmtDate(last.date)+'</h3><p>'+schedule.length+' paychecks &middot; ~'+fmtMoney(totalInterest)+' estimated interest &middot; '+fmtMoney(totalLimit())+' total credit line cleared</p>':'';
+}
+
+function saveState(){
+  try{
+    localStorage.setItem("debtplan_v1",JSON.stringify({cardData:cardData,budget:BUDGET,startDate:START_DATE.toISOString()}));
+  }catch(e){}
+}
+
+function loadState(){
+  try{
+    var raw=localStorage.getItem("debtplan_v1");
+    if(!raw)return false;
+    var s=JSON.parse(raw);
+    if(s.cardData&&s.cardData.length===cardData.length){
+      s.cardData.forEach(function(saved,i){
+        cardData[i].balance=typeof saved.balance==="number"?saved.balance:cardData[i].balance;
+        cardData[i].extra=typeof saved.extra==="number"?saved.extra:0;
+        cardData[i].limit=typeof saved.limit==="number"?saved.limit:cardData[i].limit;
+        cardData[i].apr=typeof saved.apr==="number"?saved.apr:cardData[i].apr;
+        cardData[i].min=typeof saved.min==="number"?saved.min:cardData[i].min;
+      });
+    }
+    if(typeof s.budget==="number")BUDGET=s.budget;
+    if(s.startDate)START_DATE=new Date(s.startDate);
+    var sd=START_DATE.toISOString().slice(0,10);
+    var sdi=document.getElementById("inputStartDate");
+    if(sdi)sdi.value=sd;
+    return true;
+  }catch(e){return false;}
+}
+
+function fullRender(){
+  var schedule=buildSchedule();
+  renderSummary(schedule);renderUtilBars();renderStrategy(schedule);renderSchedule(schedule);
+}
+
+document.querySelectorAll('.col-header').forEach(function(header){
+  header.addEventListener('click',function(){
+    var target=document.getElementById(header.dataset.target);if(!target)return;
+    var collapsed=target.classList.toggle('hidden');
+    header.classList.toggle('collapsed',collapsed);
+  });
+});
+
+document.getElementById('editToggle').addEventListener('click',function(){
+  var body=document.getElementById('editBody');
+  var chevron=document.getElementById('editChevron');
+  var hint=document.getElementById('editHint');
+  var open=body.classList.toggle('open');
+  chevron.style.transform=open?'rotate(180deg)':'';
+  hint.textContent=open?'tap to close':'tap to edit';
+});
+
+document.getElementById('applyBtn').addEventListener('click',function(){
+  BUDGET=parseFloat(document.getElementById('inputBudget').value)||650;
+  var dv=document.getElementById('inputStartDate').value;
+  if(dv)START_DATE=new Date(dv+'T00:00:00');
+  fullRender();
+  var badge=document.getElementById('liveBadge');
+  badge.classList.add('show');setTimeout(function(){badge.classList.remove('show');},2500);
+  saveState();
+  document.getElementById('editBody').classList.remove('open');
+  document.getElementById('editChevron').style.transform='';
+  document.getElementById('editHint').textContent='tap to edit';
+});
+
+loadState();
+renderEditor();
+fullRender();
+</script>
+</body>
+</html>
