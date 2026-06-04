@@ -164,6 +164,19 @@
 
   .note{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:24px;line-height:1.8;border-top:1px solid var(--border);padding-top:16px;}
 
+  /* DEBT PROGRESS */
+  .debt-progress-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px;}
+  .dp-row{}
+  .dp-meta{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+  .dp-name{font-size:13px;font-weight:600;}
+  .dp-info{font-family:'DM Mono',monospace;font-size:11px;text-align:right;}
+  .dp-bar-bg{height:10px;background:var(--border);border-radius:99px;overflow:hidden;position:relative;}
+  .dp-bar-paid{height:100%;border-radius:99px;background:var(--accent);transition:width 0.6s ease;position:absolute;left:0;top:0;}
+  .dp-bar-remaining{height:100%;border-radius:99px;background:var(--accent2);transition:width 0.6s ease;position:absolute;right:0;top:0;}
+  .dp-amounts{display:flex;justify-content:space-between;margin-top:4px;font-family:'DM Mono',monospace;font-size:10px;}
+  .dp-paid-lbl{color:var(--accent);}
+  .dp-remaining-lbl{color:var(--accent2);}
+
   .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--accent);color:#000;padding:10px 20px;border-radius:99px;font-size:13px;font-weight:700;opacity:0;transition:all .3s;z-index:999;white-space:nowrap;pointer-events:none;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
@@ -178,27 +191,15 @@
   <div class="subtitle">Avalanche strategy &middot; Bi-weekly &middot; Starting 06/05/2026</div>
 </header>
 
-<!-- SUMMARY -->
+<!-- DEBT PROGRESS -->
 <div class="collapsible-section">
-  <div class="col-header" data-target="secSummary">
-    <span class="col-header-label">Summary</span>
+  <div class="col-header" data-target="secProgress">
+    <span class="col-header-label">Debt Progress</span>
     <div class="col-line"></div>
     <span class="col-chevron">&#9662;</span>
   </div>
-  <div class="col-body" id="secSummary">
-    <div class="util-section" id="summaryGrid"></div>
-  </div>
-</div>
-
-<!-- UTILIZATION -->
-<div class="collapsible-section">
-  <div class="col-header" data-target="secUtil">
-    <span class="col-header-label">Current Utilization</span>
-    <div class="col-line"></div>
-    <span class="col-chevron">&#9662;</span>
-  </div>
-  <div class="col-body" id="secUtil">
-    <div class="util-section" id="utilSection"></div>
+  <div class="col-body" id="secProgress">
+    <div class="debt-progress-section" id="debtProgress"></div>
   </div>
 </div>
 
@@ -212,6 +213,30 @@
   <div class="col-body" id="secPlan">
     <div class="paycheck-list" id="paycheckList"></div>
     <div class="payoff-celebration" id="celebration"></div>
+  </div>
+</div>
+
+<!-- SUMMARY -->
+<div class="collapsible-section">
+  <div class="col-header collapsed" data-target="secSummary">
+    <span class="col-header-label">Summary</span>
+    <div class="col-line"></div>
+    <span class="col-chevron">&#9662;</span>
+  </div>
+  <div class="col-body hidden" id="secSummary">
+    <div class="util-section" id="summaryGrid"></div>
+  </div>
+</div>
+
+<!-- UTILIZATION -->
+<div class="collapsible-section">
+  <div class="col-header collapsed" data-target="secUtil">
+    <span class="col-header-label">Current Utilization</span>
+    <div class="col-line"></div>
+    <span class="col-chevron">&#9662;</span>
+  </div>
+  <div class="col-body hidden" id="secUtil">
+    <div class="util-section" id="utilSection"></div>
   </div>
 </div>
 
@@ -286,10 +311,13 @@ function saveState() {
       cardData: cardData,
       budget: BUDGET,
       startDate: START_DATE.toISOString(),
-      payments: payments
+      payments: payments,
+      openPeriods: openPeriods
     }));
   } catch(e) {}
 }
+
+var openPeriods = {};
 
 function loadState() {
   try {
@@ -306,6 +334,7 @@ function loadState() {
     if (typeof s.budget === 'number') BUDGET = s.budget;
     if (s.startDate) START_DATE = new Date(s.startDate);
     if (s.payments) payments = s.payments;
+    if (s.openPeriods) openPeriods = s.openPeriods;
   } catch(e) {}
 }
 
@@ -388,19 +417,24 @@ function buildSchedule() {
     // Focus = first with balance
     var focusKey = order.find(function(k){return bals[k]>0.005;});
 
-    // Scheduled payment: full budget to focus card (capped at balance)
     var scheduledPayments = {};
-    cardData.forEach(function(c){scheduledPayments[c.key]=0;});
-    if (focusKey) {
-      scheduledPayments[focusKey] = +Math.min(BUDGET, bals[focusKey]).toFixed(2);
-    }
-
     var periodIdx = i;
 
-    // Always apply scheduled payment for projection (Mark as Paid is tracking only)
-    var totalScheduled = scheduledPayments[focusKey] || 0;
-    if (totalScheduled > 0) {
-      bals[focusKey] = +Math.max(0, bals[focusKey] - totalScheduled).toFixed(2);
+    // Waterfall: distribute full BUDGET across cards in priority order
+    // First card gets as much as needed, surplus flows to next, etc.
+    scheduledPayments = {};
+    cardData.forEach(function(c){scheduledPayments[c.key]=0;});
+    var remaining = BUDGET;
+    for (var oi=0; oi<order.length; oi++) {
+      var ok = order[oi];
+      if (remaining < 0.005) break;
+      if (bals[ok] < 0.005) continue;
+      var canPay = +Math.min(remaining, bals[ok]).toFixed(2);
+      if (canPay > 0.005) {
+        scheduledPayments[ok] = +(scheduledPayments[ok] + canPay).toFixed(2);
+        remaining = +(remaining - canPay).toFixed(2);
+        bals[ok] = +Math.max(0, bals[ok] - canPay).toFixed(2);
+      }
     }
 
     // Apply extras for all cards
@@ -412,7 +446,7 @@ function buildSchedule() {
       }
     });
 
-    var totalPaidThisPeriod = totalScheduled + cardData.reduce(function(s,c){return s+extrasApplied[c.key];},0);
+    var totalPaidThisPeriod = BUDGET - remaining + cardData.reduce(function(s,c){return s+extrasApplied[c.key];},0);
 
     periods.push({
       idx: i,
@@ -505,6 +539,64 @@ function renderSummary(schedule) {
 
   document.getElementById('summaryGrid').innerHTML = html;
   document.getElementById('notebudget').textContent = BUDGET.toFixed(0);
+}
+
+// ── RENDER DEBT PROGRESS ──────────────────────────────────────────────────
+function renderDebtProgress() {
+  var container = document.getElementById('debtProgress');
+  if (!container) return;
+  // Use original balances from cardData as starting point
+  // Track paid amounts from payment log
+  var html = '';
+  cardData.forEach(function(c) {
+    var originalBal = c.balance;
+    // Total paid = sum of all scheduled (marked paid) + all extras across all periods
+    var totalPaid = 0;
+    Object.keys(payments).forEach(function(pidx) {
+      var p = payments[pidx];
+      if (p[c.key]) {
+        // extras
+        if (p[c.key].extras) {
+          p[c.key].extras.forEach(function(e){ totalPaid += e.amount; });
+        }
+      }
+    });
+    // Also add marked scheduled payments
+    Object.keys(payments).forEach(function(pidx) {
+      var p = payments[pidx];
+      if (p[c.key] && p[c.key].paid) {
+        // Find what was scheduled that period from the last schedule build
+        // Use stored scheduled amounts if available
+        if (p[c.key].scheduledAmt) {
+          totalPaid += p[c.key].scheduledAmt;
+        }
+      }
+    });
+
+    var remaining = Math.max(0, originalBal - totalPaid);
+    var paidPct = originalBal > 0 ? Math.min(totalPaid/originalBal*100, 100) : 100;
+    var remainPct = 100 - paidPct;
+    var remainColor = remaining < 0.01 ? 'var(--accent)' : utilColor(c.limit > 0 ? remaining/c.limit*100 : 0);
+
+    html +=
+      '<div class="dp-row">'+
+        '<div class="dp-meta">'+
+          '<div class="dp-name">'+c.name+'</div>'+
+          '<div class="dp-info" style="color:'+remainColor+'">'+
+            (remaining < 0.01 ? '&#10003; PAID OFF' : fmtMoney(remaining)+' remaining')+
+          '</div>'+
+        '</div>'+
+        '<div class="dp-bar-bg">'+
+          '<div class="dp-bar-paid" style="width:'+paidPct.toFixed(1)+'%"></div>'+
+          '<div class="dp-bar-remaining" style="width:'+remainPct.toFixed(1)+'%"></div>'+
+        '</div>'+
+        '<div class="dp-amounts">'+
+          '<span class="dp-paid-lbl">'+fmtMoney(totalPaid)+' paid</span>'+
+          '<span class="dp-remaining-lbl">'+fmtMoney(originalBal)+' original</span>'+
+        '</div>'+
+      '</div>';
+  });
+  container.innerHTML = html;
 }
 
 // ── RENDER UTIL BARS ───────────────────────────────────────────────────────
@@ -638,12 +730,13 @@ function renderSchedule(schedule) {
       if (e.target.closest('button') || e.target.closest('input')) return;
       var b = el.querySelector('.pc-body'), open = b.classList.toggle('visible');
       el.querySelector('.pc-header').classList.toggle('open', open);
+      openPeriods[periodIdx] = open;
+      saveState();
     });
 
-    // Only open the first upcoming unpaid period
-    var today = new Date();
-    var isPastPaid = isMarkedPaid(periodIdx, period.focusKey) && period.date < today;
-    if (periodIdx === 0 && !isPastPaid) {
+    // Restore saved open state, default first period open
+    var shouldBeOpen = (periodIdx in openPeriods) ? openPeriods[periodIdx] : (periodIdx === 0);
+    if (shouldBeOpen) {
       el.querySelector('.pc-body').classList.add('visible');
       el.querySelector('.pc-header').classList.add('open');
     }
@@ -663,9 +756,12 @@ function ensurePayment(periodIdx, cardKey) {
   if (!payments[periodIdx][cardKey]) payments[periodIdx][cardKey] = {paid:false, extras:[]};
 }
 
-function toggleMarkPaid(periodIdx, cardKey) {
+function toggleMarkPaid(periodIdx, cardKey, scheduledAmt) {
   ensurePayment(periodIdx, cardKey);
   payments[periodIdx][cardKey].paid = !payments[periodIdx][cardKey].paid;
+  if (payments[periodIdx][cardKey].paid && scheduledAmt) {
+    payments[periodIdx][cardKey].scheduledAmt = scheduledAmt;
+  }
   saveState();
   fullRender();
   showToast(payments[periodIdx][cardKey].paid ? 'Payment marked as paid!' : 'Payment unmarked');
@@ -718,6 +814,7 @@ function deleteExtra(periodIdx, cardKey, extraIdx) {
 // ── FULL RENDER ────────────────────────────────────────────────────────────
 function fullRender() {
   var schedule = buildSchedule();
+  renderDebtProgress();
   renderSummary(schedule);
   renderUtilBars();
   renderSchedule(schedule);
@@ -764,3 +861,5 @@ fullRender();
 </script>
 </body>
 </html>
+
+  
