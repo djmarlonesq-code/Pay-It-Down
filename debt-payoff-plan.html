@@ -254,6 +254,7 @@
         </div>
         <div class="card-editor-list" id="cardEditorBody"></div>
         <button class="apply-btn" id="applyBtn">&#8635; Recalculate Plan</button>
+        <button class="apply-btn" id="resetBtn" style="margin-top:10px;background:rgba(255,107,107,0.15);color:var(--accent2);border:1px solid rgba(255,107,107,0.3);">&#128465; Reset Payment History</button>
       </div>
     </div>
   </div>
@@ -397,11 +398,10 @@ function getPriorityOrder(bals) {
 
 // ── BUILD SCHEDULE ─────────────────────────────────────────────────────────
 function buildSchedule() {
+  // Simple forward projection from current dynamic balances
   var bals = {};
   cardData.forEach(function(c){ bals[c.key] = getDynamicBalance(c.key); });
   var order = getPriorityOrder(bals);
-  var cardMap = {};
-  cardData.forEach(function(c){cardMap[c.key]=c;});
   var periods = [];
   var date = new Date(START_DATE);
 
@@ -409,41 +409,49 @@ function buildSchedule() {
     var totalDebt = cardData.reduce(function(s,c){return s+bals[c.key];},0);
     if (totalDebt < 0.005) break;
 
-    // Accrue interest
+    var focusKey = order.find(function(k){return bals[k]>0.005;});
+
+    // Interest estimate (informational only)
     var periodInterest = {};
     cardData.forEach(function(c){
       periodInterest[c.key] = bals[c.key]>0 ? interest14(bals[c.key], c.apr) : 0;
-      bals[c.key] = +(bals[c.key]+periodInterest[c.key]).toFixed(2);
     });
 
-    var focusKey = order.find(function(k){return bals[k]>0.005;});
-
-    // Waterfall: full BUDGET cascades through priority order
+    // Waterfall scheduled payments
     var scheduledPayments = {};
     cardData.forEach(function(c){scheduledPayments[c.key]=0;});
+    var tempBals = Object.assign({}, bals);
     var remaining = BUDGET;
     for (var oi=0; oi<order.length; oi++) {
       var ok = order[oi];
       if (remaining < 0.005) break;
-      if (bals[ok] < 0.005) continue;
-      var canPay = +Math.min(remaining, bals[ok]).toFixed(2);
+      if (tempBals[ok] < 0.005) continue;
+      var canPay = +Math.min(remaining, tempBals[ok]).toFixed(2);
       if (canPay > 0.005) {
         scheduledPayments[ok] = +(scheduledPayments[ok]+canPay).toFixed(2);
         remaining = +(remaining-canPay).toFixed(2);
-        bals[ok] = +Math.max(0, bals[ok]-canPay).toFixed(2);
+        tempBals[ok] = +Math.max(0, tempBals[ok]-canPay).toFixed(2);
       }
     }
+
+    // balsAfter = current balance minus scheduled payment (simple)
+    var balsAfter = {};
+    cardData.forEach(function(c){
+      balsAfter[c.key] = +Math.max(0, bals[c.key] - (scheduledPayments[c.key]||0)).toFixed(2);
+    });
 
     periods.push({
       idx: i,
       date: new Date(date),
       scheduledPayments: scheduledPayments,
       interest: periodInterest,
-      balsAfter: Object.assign({},bals),
+      balsAfter: balsAfter,
       focusKey: focusKey,
       order: order.slice()
     });
 
+    // Advance balances for next period
+    cardData.forEach(function(c){ bals[c.key] = balsAfter[c.key]; });
     order = getPriorityOrder(bals);
     date = addDays(date, 14);
   }
@@ -564,7 +572,8 @@ function renderSchedule(schedule) {
       var isPayoff = bal < 0.005 && scheduled > 0.005;
       var isFocus = scheduled > 0.005;
       var pill = isPayoff ? '<span class="pill payoff">PAID OFF</span>' : isFocus ? '<span class="pill focus">FOCUS</span>' : '';
-      var utilPct = c.limit>0&&bal>0 ? (bal/c.limit*100) : 0;
+      var dynBal = getDynamicBalance(k);
+      var utilPct = c.limit>0&&dynBal>0 ? (dynBal/c.limit*100) : 0;
       var uColor = utilColor(utilPct);
 
       // Extras
@@ -599,8 +608,8 @@ function renderSchedule(schedule) {
           '</div>'+
           '<div class="pay-row-stats">'+
             '<div><div class="pay-stat-label">Scheduled</div><div class="pay-stat-val green">'+fmtMoney(scheduled)+'</div></div>'+
-            '<div><div class="pay-stat-label">Interest</div><div class="pay-stat-val red">+'+fmtMoney(int)+'</div></div>'+
-            '<div><div class="pay-stat-label">Bal After</div><div class="pay-stat-val muted">'+fmtMoney(bal)+'</div></div>'+
+            '<div><div class="pay-stat-label">Interest (est)</div><div class="pay-stat-val red">'+(isMarkedPaid(periodIdx,period.focusKey)?'+'+fmtMoney(int):'--')+'</div></div>'+
+            '<div><div class="pay-stat-label">Bal After</div><div class="pay-stat-val muted">'+fmtMoney(getDynamicBalance(k))+'</div></div>'+
             '<div><div class="pay-stat-label">Util After</div><div class="pay-stat-val" style="color:'+uColor+'">'+utilPct.toFixed(1)+'%</div></div>'+
           '</div>'+
           '<div class="payment-actions">'+
@@ -829,7 +838,23 @@ document.getElementById('applyBtn').addEventListener('click', function() {
   document.getElementById('editHint').textContent='tap to edit';
 });
 
+// ── RESET PAYMENTS ────────────────────────────────────────────────────────
+document.getElementById('resetBtn').addEventListener('click', function() {
+  if (!confirm('Clear all payment history? Your balances, APRs and settings will be kept.')) return;
+  payments = {};
+  openPeriods = {};
+  saveState();
+  fullRender();
+  showToast('Payment history cleared');
+});
+
 // ── INIT ───────────────────────────────────────────────────────────────────
+// Wipe all previous version keys so we always start clean
+try {
+  ['pid_v1','pid_v2','pid_v3','pid_v4','debtplan_v1'].forEach(function(k){
+    localStorage.removeItem(k);
+  });
+} catch(e) {}
 loadState();
 renderEditor();
 fullRender();
