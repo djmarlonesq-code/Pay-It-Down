@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Debt Payoff Plan</title>
+<title>Pay It Down</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -23,6 +23,7 @@
   h1 span{color:var(--accent);}
   .subtitle{color:var(--muted);font-size:13px;margin-top:6px;font-family:'DM Mono',monospace;}
 
+  /* COLLAPSIBLE */
   .collapsible-section{margin-bottom:24px;}
   .col-header{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;margin-bottom:14px;}
   .col-header-label{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap;}
@@ -32,6 +33,7 @@
   .col-body{display:block;}
   .col-body.hidden{display:none;}
 
+  /* CARD DATA PANEL */
   .edit-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
   .edit-panel-header{padding:16px 20px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);}
   .edit-panel-header:hover{background:var(--surface2);}
@@ -51,6 +53,7 @@
   .field-input:focus{border-color:var(--accent);}
   .field-input.wide{width:170px;}
 
+  /* RESPONSIVE CARD EDITOR */
   .card-editor-list{display:flex;flex-direction:column;gap:14px;}
   .card-edit-row{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;}
   .card-edit-name{font-size:14px;font-weight:700;margin-bottom:3px;}
@@ -58,7 +61,6 @@
   .util-chip{display:inline-block;font-family:'DM Mono',monospace;font-size:11px;padding:2px 8px;border-radius:99px;font-weight:500;}
   .card-edit-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
   @media(min-width:480px){.card-edit-fields{grid-template-columns:repeat(3,1fr);}}
-  @media(min-width:640px){.card-edit-fields{grid-template-columns:repeat(5,1fr);}}
   .card-edit-field{display:flex;flex-direction:column;gap:4px;}
   .card-edit-field label{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-family:'DM Mono',monospace;}
   .card-edit-field input{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;width:100%;outline:none;transition:border-color .2s;}
@@ -68,13 +70,7 @@
   .apply-btn:hover{opacity:.85;}
   .apply-btn:active{opacity:.7;}
 
-  .guide{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:18px;}
-  .guide-step{display:flex;gap:14px;}
-  .guide-num{width:26px;height:26px;border-radius:50%;background:rgba(0,229,160,.12);border:1px solid rgba(0,229,160,.3);color:var(--accent);font-family:'DM Mono',monospace;font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
-  .guide-content h4{font-size:13px;font-weight:700;margin-bottom:4px;}
-  .guide-content p{font-size:12px;color:var(--muted);line-height:1.65;font-family:'DM Mono',monospace;}
-  .guide-content p strong{color:var(--text);}
-
+  /* SUMMARY */
   .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}
   .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;}
   .stat-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:6px;}
@@ -83,6 +79,7 @@
   .stat-val.red{color:var(--accent2);}
   .stat-val.yellow{color:var(--accent3);}
 
+  /* UTIL */
   .util-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px;}
   .util-meta{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;}
   .util-name{font-size:13px;font-weight:600;}
@@ -90,18 +87,19 @@
   .util-bar-bg{height:6px;background:var(--border);border-radius:99px;overflow:hidden;}
   .util-bar-fill{height:100%;border-radius:99px;transition:width .5s ease;}
 
-  .strategy{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;padding:16px 20px;font-size:13px;line-height:1.7;}
-  .strategy strong{color:var(--accent);}
-
+  /* PAYCHECK CARDS */
   .paycheck-list{display:flex;flex-direction:column;gap:14px;}
   .paycheck-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .2s;}
   .paycheck-card:hover{border-color:#3a3a55;}
+  .paycheck-card.period-paid{border-color:rgba(0,229,160,0.3);}
   .pc-header{padding:14px 18px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;gap:12px;}
   .pc-header:hover{background:var(--surface2);}
   .pc-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   .pc-num{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);background:var(--border);border-radius:6px;padding:3px 8px;white-space:nowrap;}
   .pc-date{font-size:15px;font-weight:700;}
+  .pc-badges{display:flex;gap:6px;flex-wrap:wrap;}
   .pc-badge{font-size:10px;font-family:'DM Mono',monospace;padding:3px 8px;border-radius:99px;background:var(--accent);color:#000;font-weight:500;white-space:nowrap;}
+  .pc-badge.paid-period{background:rgba(0,229,160,0.15);color:var(--accent);border:1px solid rgba(0,229,160,0.3);}
   .pc-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
   .pc-total{font-family:'DM Mono',monospace;font-size:14px;color:var(--accent);font-weight:500;}
   .chevron{color:var(--muted);font-size:14px;transition:transform .3s;}
@@ -109,12 +107,13 @@
   .pc-body{display:none;padding:0 18px 18px;border-top:1px solid var(--border);}
   .pc-body.visible{display:block;}
 
+  /* PAYMENT ROWS */
   .pay-rows{margin-top:14px;display:flex;flex-direction:column;gap:10px;}
   .pay-row{background:var(--surface2);border-radius:10px;padding:12px 14px;}
   .pay-row-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
   .pay-row-name{font-size:13px;font-weight:600;}
   .pay-row-apr{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px;}
-  .pay-row-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .pay-row-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;}
   @media(max-width:380px){.pay-row-stats{grid-template-columns:repeat(2,1fr);}}
   .pay-stat-label{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:2px;}
   .pay-stat-val{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;}
@@ -124,8 +123,29 @@
 
   .pill{display:inline-block;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:99px;font-family:'DM Mono',monospace;font-weight:500;}
   .pill.focus{background:rgba(0,229,160,.15);color:var(--accent);}
-  .pill.min{background:rgba(255,107,107,.12);color:var(--accent2);}
   .pill.payoff{background:var(--accent);color:#000;}
+
+  /* MARK AS PAID + EXTRA PAYMENTS */
+  .payment-actions{border-top:1px solid var(--border);padding-top:10px;margin-top:4px;}
+  .mark-paid-btn{background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.3);color:var(--accent);border-radius:8px;padding:8px 14px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;}
+  .mark-paid-btn:hover{background:rgba(0,229,160,0.2);}
+  .mark-paid-btn.paid{background:rgba(0,229,160,0.12);border-color:rgba(0,229,160,0.25);color:var(--accent);cursor:default;}
+  .mark-paid-btn.paid::before{content:'✓ ';}
+
+  .extra-payments-section{margin-top:10px;}
+  .extra-payment-log{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+  .extra-entry{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 10px;}
+  .extra-entry-date{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);flex-shrink:0;}
+  .extra-entry-amt{font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);font-weight:500;flex:1;}
+  .extra-entry-edit{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:'DM Mono',monospace;padding:2px 6px;border-radius:4px;transition:color .2s;}
+  .extra-entry-edit:hover{color:var(--accent3);}
+  .extra-entry-input{font-family:'DM Mono',monospace;font-size:12px;background:var(--surface2);border:1px solid var(--accent);border-radius:6px;padding:4px 8px;color:var(--text);width:90px;outline:none;}
+
+  .add-extra-row{display:flex;gap:8px;align-items:center;}
+  .add-extra-input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;transition:border-color .2s;}
+  .add-extra-input:focus{border-color:var(--accent3);}
+  .add-extra-btn{background:rgba(255,209,102,0.12);border:1px solid rgba(255,209,102,0.3);color:var(--accent3);border-radius:8px;padding:8px 14px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s;}
+  .add-extra-btn:hover{background:rgba(255,209,102,0.2);}
 
   .pc-footer{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
   .pc-footer span{color:var(--text);}
@@ -143,6 +163,9 @@
   .payoff-celebration p{color:var(--muted);font-size:13px;font-family:'DM Mono',monospace;}
 
   .note{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:24px;line-height:1.8;border-top:1px solid var(--border);padding-top:16px;}
+
+  .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--accent);color:#000;padding:10px 20px;border-radius:99px;font-size:13px;font-weight:700;opacity:0;transition:all .3s;z-index:999;white-space:nowrap;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
 </head>
 <body>
@@ -152,102 +175,10 @@
 <header>
   <div class="tag">Debt Payoff Plan</div>
   <h1>Pay It <span>Down.</span></h1>
-  <div class="subtitle">Hybrid strategy &middot; Bi-weekly &middot; Starting 06/05/2026</div>
+  <div class="subtitle">Avalanche strategy &middot; Bi-weekly &middot; Starting 06/05/2026</div>
 </header>
 
-<!-- UTILIZATION — expanded by default -->
-<div class="collapsible-section">
-  <div class="col-header" data-target="secUtil">
-    <span class="col-header-label">Current Utilization</span>
-    <div class="col-line"></div>
-    <span class="col-chevron">&#9662;</span>
-  </div>
-  <div class="col-body" id="secUtil">
-    <div class="util-section" id="utilSection"></div>
-  </div>
-</div>
-
-<!-- PAYCHECK PLAN — expanded by default -->
-<div class="collapsible-section">
-  <div class="col-header" data-target="secPlan">
-    <span class="col-header-label">Paycheck-by-Paycheck Plan</span>
-    <div class="col-line"></div>
-    <span class="col-chevron">&#9662;</span>
-  </div>
-  <div class="col-body" id="secPlan">
-    <div class="paycheck-list" id="paycheckList"></div>
-    <div class="payoff-celebration" id="celebration"></div>
-  </div>
-</div>
-
-<!-- HOW TO USE — collapsed by default -->
-<div class="collapsible-section">
-  <div class="col-header collapsed" data-target="secHowTo">
-    <span class="col-header-label">How to Use This Plan</span>
-    <div class="col-line"></div>
-    <span class="col-chevron">&#9662;</span>
-  </div>
-  <div class="col-body hidden" id="secHowTo">
-    <div class="guide">
-      <div class="guide-step">
-        <div class="guide-num">1</div>
-        <div class="guide-content">
-          <h4>Find your current paycheck period</h4>
-          <p>Tap <strong>Pay 01</strong> to expand it. Each card shows exactly how much to pay that period. The <strong>FOCUS</strong> card gets the bulk of your $650. All others get their minimum payment only.</p>
-        </div>
-      </div>
-      <div class="guide-step">
-        <div class="guide-num">2</div>
-        <div class="guide-content">
-          <h4>Make your payments</h4>
-          <p>Pay each card the amount shown. The <strong>FOCUS</strong> card is the priority &mdash; pay that first. <strong>MIN</strong> payments keep other cards current and avoid late fees. <strong>PAID OFF</strong> means that card hits zero this paycheck.</p>
-        </div>
-      </div>
-      <div class="guide-step">
-        <div class="guide-num">3</div>
-        <div class="guide-content">
-          <h4>Recording a payment you already made</h4>
-          <p>Open <strong>Balances, Limits &amp; APRs</strong> above. Find the card and enter the amount already paid in <strong>Extra Paid ($)</strong>. Hit <strong>Recalculate Plan</strong> and the schedule updates with your reduced balance.</p>
-        </div>
-      </div>
-      <div class="guide-step">
-        <div class="guide-num">4</div>
-        <div class="guide-content">
-          <h4>Updating balances after a statement</h4>
-          <p>After your statement closes, open the editor and update <strong>Balance ($)</strong> to your current statement balance. Hit Recalculate &mdash; the entire payoff timeline adjusts instantly.</p>
-        </div>
-      </div>
-      <div class="guide-step">
-        <div class="guide-num">5</div>
-        <div class="guide-content">
-          <h4>Paying extra one paycheck</h4>
-          <p>Have extra cash? Bump up <strong>Budget per Paycheck</strong> temporarily and recalculate, then set it back next time. Or enter the extra in <strong>Extra Paid</strong> on your FOCUS card &mdash; same result.</p>
-        </div>
-      </div>
-      <div class="guide-step">
-        <div class="guide-num">6</div>
-        <div class="guide-content">
-          <h4>Understanding the pill labels</h4>
-          <p><strong style="color:#00e5a0">FOCUS</strong> &mdash; max payment this period. &nbsp;<strong style="color:#ff6b6b">MIN</strong> &mdash; minimum only, keeping it current. &nbsp;<strong style="color:#00e5a0">PAID OFF</strong> &mdash; card hits zero this paycheck. Freed budget rolls automatically to the next card in line.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- SUMMARY — collapsed by default -->
-<div class="collapsible-section">
-  <div class="col-header collapsed" data-target="secSummary">
-    <span class="col-header-label">Summary</span>
-    <div class="col-line"></div>
-    <span class="col-chevron">&#9662;</span>
-  </div>
-  <div class="col-body hidden" id="secSummary">
-    <div class="summary-grid" id="summaryGrid"></div>
-  </div>
-</div>
-
-<!-- CARD DATA — collapsed by default -->
+<!-- CARD DATA -->
 <div class="collapsible-section">
   <div class="col-header collapsed" data-target="secCardData">
     <span class="col-header-label">Card Data</span>
@@ -285,286 +216,532 @@
   </div>
 </div>
 
-<!-- STRATEGY — collapsed by default -->
+<!-- SUMMARY -->
 <div class="collapsible-section">
-  <div class="col-header collapsed" data-target="secStrategy">
-    <span class="col-header-label">Strategy</span>
+  <div class="col-header collapsed" data-target="secSummary">
+    <span class="col-header-label">Summary</span>
     <div class="col-line"></div>
     <span class="col-chevron">&#9662;</span>
   </div>
-  <div class="col-body hidden" id="secStrategy">
-    <div class="strategy" id="strategyBox"></div>
+  <div class="col-body hidden" id="secSummary">
+    <div class="summary-grid" id="summaryGrid"></div>
+  </div>
+</div>
+
+<!-- UTILIZATION -->
+<div class="collapsible-section">
+  <div class="col-header" data-target="secUtil">
+    <span class="col-header-label">Current Utilization</span>
+    <div class="col-line"></div>
+    <span class="col-chevron">&#9662;</span>
+  </div>
+  <div class="col-body" id="secUtil">
+    <div class="util-section" id="utilSection"></div>
+  </div>
+</div>
+
+<!-- PAYCHECK PLAN -->
+<div class="collapsible-section">
+  <div class="col-header" data-target="secPlan">
+    <span class="col-header-label">Paycheck-by-Paycheck Plan</span>
+    <div class="col-line"></div>
+    <span class="col-chevron">&#9662;</span>
+  </div>
+  <div class="col-body" id="secPlan">
+    <div class="paycheck-list" id="paycheckList"></div>
+    <div class="payoff-celebration" id="celebration"></div>
   </div>
 </div>
 
 <div class="note">
-  * Interest estimated using daily periodic rate x 14 days applied to opening balance each period.<br>
-  * "Extra Paid" reduces the opening balance before the plan runs &mdash; use it to record lump sums already paid.<br>
-  * Minimum payments applied to non-focus cards. Surplus waterfalls down the priority chain automatically.<br>
-  * After full payoff, redirect your $<span id="notebudget">650</span>/paycheck to savings or your next goal.
+  * Interest accrues daily based on APR and is added to each period's opening balance automatically.<br>
+  * $<span id="notebudget">650</span> goes entirely to the focus card each paycheck. Minimum payments are handled separately.<br>
+  * Use <strong>Mark as Paid</strong> to log your scheduled payment. Use <strong>+ Add Extra</strong> to log any additional payments.<br>
+  * Balances update dynamically — no manual updates needed unless correcting a discrepancy.
 </div>
 
 </div>
+<div class="toast" id="toast"></div>
+
 <script>
-var cardData=[
-  {key:'apple',    name:'Apple Card',         apr:25.49,limit:4500,balance:1700.74,extra:0,min:25},
-  {key:'creditone',name:'Credit One 5348',    apr:27.49,limit:1050,balance:230.10, extra:0,min:25},
-  {key:'venmo',    name:'Venmo Card',         apr:27.74,limit:7500,balance:1275.58,extra:0,min:25},
-  {key:'capone',   name:'Cap One Quicksilver',apr:28.49,limit:5000,balance:394.95, extra:0,min:25},
+// ── CARD DATA ──────────────────────────────────────────────────────────────
+var cardData = [
+  {key:'apple',    name:'Apple Card',         apr:25.49, limit:4500, balance:1700.74},
+  {key:'creditone',name:'Credit One 5348',    apr:27.49, limit:1050, balance:230.10},
+  {key:'venmo',    name:'Venmo Card',         apr:27.74, limit:7500, balance:1275.58},
+  {key:'capone',   name:'Cap One Quicksilver',apr:28.49, limit:5000, balance:394.95},
 ];
-var BUDGET=650;
-var START_DATE=new Date('2026-06-05');
-var DAYS=14;
 
-function totalLimit(){return cardData.reduce(function(s,c){return s+c.limit;},0);}
-function interest14(bal,aprPct){return +(bal*(aprPct/100/365)*DAYS).toFixed(2);}
-function addDays(d,n){var x=new Date(d);x.setDate(x.getDate()+n);return x;}
-function fmtDate(d){return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
-function fmtMoney(n){return '$'+Math.max(0,n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
-function utilColor(p){return p>30?'#ff6b6b':p>15?'#ffd166':'#00e5a0';}
+var BUDGET = 650;
+var START_DATE = new Date('2026-06-05T00:00:00');
+var DAYS = 14;
 
-function getPriorityOrder(cards){
-  var apple=cards.find(function(c){return c.key==='apple';});
-  var rest=cards.filter(function(c){return c.key!=='apple'&&c.balance>0;}).sort(function(a,b){return b.apr-a.apr;});
-  var result=[];
-  if(apple&&apple.balance>0)result.push(apple.key);
+// payments[periodIdx][cardKey] = { paid: bool, extras: [{date, amount}] }
+var payments = {};
+
+// ── PERSIST ────────────────────────────────────────────────────────────────
+function saveState() {
+  try {
+    localStorage.setItem('pid_v4', JSON.stringify({
+      cardData: cardData,
+      budget: BUDGET,
+      startDate: START_DATE.toISOString(),
+      payments: payments
+    }));
+  } catch(e) {}
+}
+
+function loadState() {
+  try {
+    var raw = localStorage.getItem('pid_v4');
+    if (!raw) return;
+    var s = JSON.parse(raw);
+    if (s.cardData && s.cardData.length === cardData.length) {
+      s.cardData.forEach(function(saved, i) {
+        if (typeof saved.balance === 'number') cardData[i].balance = saved.balance;
+        if (typeof saved.limit === 'number') cardData[i].limit = saved.limit;
+        if (typeof saved.apr === 'number') cardData[i].apr = saved.apr;
+      });
+    }
+    if (typeof s.budget === 'number') BUDGET = s.budget;
+    if (s.startDate) START_DATE = new Date(s.startDate);
+    if (s.payments) payments = s.payments;
+  } catch(e) {}
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+function totalLimit() { return cardData.reduce(function(s,c){return s+c.limit;},0); }
+function interest14(bal, aprPct) { return +(bal*(aprPct/100/365)*DAYS).toFixed(2); }
+function addDays(d, n) { var x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function fmtDate(d) { return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+function fmtDateShort(d) { return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+function fmtMoney(n) { return '$'+Math.max(0,n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+function utilColor(p) { return p>30?'#ff6b6b':p>15?'#ffd166':'#00e5a0'; }
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2000);
+}
+
+// Get total extras paid for a card in a period
+function getExtrasPaid(periodIdx, cardKey) {
+  var p = payments[periodIdx];
+  if (!p || !p[cardKey] || !p[cardKey].extras) return 0;
+  return p[cardKey].extras.reduce(function(s,e){return s+e.amount;},0);
+}
+
+// Get all extras for a card in a period
+function getExtras(periodIdx, cardKey) {
+  var p = payments[periodIdx];
+  if (!p || !p[cardKey] || !p[cardKey].extras) return [];
+  return p[cardKey].extras;
+}
+
+// Is scheduled payment marked as paid
+function isMarkedPaid(periodIdx, cardKey) {
+  var p = payments[periodIdx];
+  return p && p[cardKey] && p[cardKey].paid === true;
+}
+
+// ── PRIORITY ORDER ─────────────────────────────────────────────────────────
+// Apple first (utilization), then APR descending
+function getPriorityOrder(balances) {
+  var apple = cardData.find(function(c){return c.key==='apple';});
+  var rest = cardData.filter(function(c){
+    return c.key!=='apple' && (balances ? balances[c.key] > 0 : c.balance > 0);
+  }).sort(function(a,b){return b.apr-a.apr;});
+  var result = [];
+  if (apple && (balances ? balances[apple.key] > 0 : apple.balance > 0)) result.push(apple.key);
   rest.forEach(function(c){result.push(c.key);});
-  cards.filter(function(c){return c.balance<=0&&c.key!=='apple';}).forEach(function(c){result.push(c.key);});
+  // Add zero-balance cards at end
+  cardData.filter(function(c){
+    return !result.includes(c.key);
+  }).forEach(function(c){result.push(c.key);});
   return result;
 }
 
-function buildSchedule(){
-  var bals={};
-  cardData.forEach(function(c){bals[c.key]=Math.max(0,+(c.balance-c.extra).toFixed(2));});
-  var order=getPriorityOrder(cardData.map(function(c){return Object.assign({},c,{balance:bals[c.key]});}));
-  var cardMap={};cardData.forEach(function(c){cardMap[c.key]=c;});
-  var periods=[];var date=new Date(START_DATE);
-  for(var i=0;i<30;i++){
-    var totalDebt=cardData.reduce(function(s,c){return s+bals[c.key];},0);
-    if(totalDebt<0.005)break;
-    var periodInterest={};
+// ── BUILD SCHEDULE ─────────────────────────────────────────────────────────
+function buildSchedule() {
+  // Start with base balances
+  var bals = {};
+  cardData.forEach(function(c){ bals[c.key] = Math.max(0, c.balance); });
+
+  var order = getPriorityOrder(bals);
+  var cardMap = {};
+  cardData.forEach(function(c){cardMap[c.key]=c;});
+  var periods = [];
+  var date = new Date(START_DATE);
+
+  for (var i=0; i<30; i++) {
+    var totalDebt = cardData.reduce(function(s,c){return s+bals[c.key];},0);
+    if (totalDebt < 0.005) break;
+
+    // Accrue interest
+    var periodInterest = {};
     cardData.forEach(function(c){
-      periodInterest[c.key]=bals[c.key]>0?interest14(bals[c.key],c.apr):0;
-      bals[c.key]=+(bals[c.key]+periodInterest[c.key]).toFixed(2);
+      periodInterest[c.key] = bals[c.key] > 0 ? interest14(bals[c.key], c.apr) : 0;
+      bals[c.key] = +(bals[c.key] + periodInterest[c.key]).toFixed(2);
     });
-    var focusKey=order.find(function(k){return bals[k]>0.005;});
-    var payments={};cardData.forEach(function(c){payments[c.key]=0;});
-    var remaining=BUDGET;
-    order.forEach(function(k){
-      if(k!==focusKey&&bals[k]>0.005){
-        var m=Math.min(cardMap[k].min,bals[k]);payments[k]=m;remaining=+(remaining-m).toFixed(2);
+
+    // Focus = first with balance
+    var focusKey = order.find(function(k){return bals[k]>0.005;});
+
+    // Scheduled payment: full budget to focus card (capped at balance)
+    var scheduledPayments = {};
+    cardData.forEach(function(c){scheduledPayments[c.key]=0;});
+    if (focusKey) {
+      scheduledPayments[focusKey] = +Math.min(BUDGET, bals[focusKey]).toFixed(2);
+    }
+
+    // Apply scheduled payment if marked paid
+    var totalScheduled = scheduledPayments[focusKey] || 0;
+    var periodIdx = i;
+    var scheduledApplied = isMarkedPaid(periodIdx, focusKey) ? totalScheduled : 0;
+
+    // Apply extras for all cards
+    var extrasApplied = {};
+    cardData.forEach(function(c){
+      extrasApplied[c.key] = Math.min(getExtrasPaid(periodIdx, c.key), bals[c.key]);
+    });
+
+    // Update balances
+    if (scheduledApplied > 0) {
+      bals[focusKey] = +Math.max(0, bals[focusKey] - scheduledApplied).toFixed(2);
+    }
+    cardData.forEach(function(c){
+      if (extrasApplied[c.key] > 0) {
+        bals[c.key] = +Math.max(0, bals[c.key] - extrasApplied[c.key]).toFixed(2);
       }
     });
-    for(var oi=0;oi<order.length;oi++){
-      var k=order[oi];if(remaining<0.005)break;if(bals[k]<0.005)continue;
-      var canPay=+(Math.min(remaining,bals[k]-payments[k])).toFixed(2);
-      if(canPay>0.005){payments[k]=+(payments[k]+canPay).toFixed(2);remaining=+(remaining-canPay).toFixed(2);}
-    }
-    cardData.forEach(function(c){bals[c.key]=+Math.max(0,bals[c.key]-payments[c.key]).toFixed(2);});
-    var totalPaid=+Object.values(payments).reduce(function(a,b){return a+b;},0).toFixed(2);
-    periods.push({date:new Date(date),payments:payments,interest:periodInterest,balsAfter:Object.assign({},bals),focusKey:focusKey,totalPaid:totalPaid,order:order});
-    date=addDays(date,14);
+
+    var totalPaidThisPeriod = scheduledApplied + cardData.reduce(function(s,c){return s+extrasApplied[c.key];},0);
+
+    periods.push({
+      idx: i,
+      date: new Date(date),
+      scheduledPayments: scheduledPayments,
+      scheduledApplied: scheduledApplied,
+      extrasApplied: extrasApplied,
+      interest: periodInterest,
+      balsAfter: Object.assign({},bals),
+      focusKey: focusKey,
+      totalPaid: totalPaidThisPeriod,
+      order: order.slice()
+    });
+
+    // Recompute order for next period
+    order = getPriorityOrder(bals);
+    date = addDays(date, 14);
   }
   return periods;
 }
 
-function renderEditor(){
-  var body=document.getElementById('cardEditorBody');body.innerHTML='';
-  cardData.forEach(function(c,i){
-    var util=c.limit>0?Math.max(0,(c.balance-c.extra)/c.limit*100):0;
-    var uColor=utilColor(util);
-    var div=document.createElement('div');div.className='card-edit-row';
-    div.innerHTML=
+// ── RENDER EDITOR ──────────────────────────────────────────────────────────
+function renderEditor() {
+  var body = document.getElementById('cardEditorBody');
+  body.innerHTML = '';
+  cardData.forEach(function(c, i) {
+    var util = c.limit > 0 ? Math.max(0, c.balance/c.limit*100) : 0;
+    var uColor = utilColor(util);
+    var div = document.createElement('div');
+    div.className = 'card-edit-row';
+    div.innerHTML =
       '<div class="card-edit-name">'+c.name+'</div>'+
       '<div class="card-edit-meta"><span id="aprTxt_'+i+'">'+c.apr+'% APR</span> &middot; <span class="util-chip" id="utilChip_'+i+'" style="background:'+uColor+'22;color:'+uColor+'">'+util.toFixed(1)+'% util</span></div>'+
       '<div class="card-edit-fields">'+
         '<div class="card-edit-field"><label>Balance ($)</label><input type="number" step="0.01" min="0" value="'+c.balance.toFixed(2)+'" data-i="'+i+'" data-field="balance"></div>'+
-        '<div class="card-edit-field"><label>Extra Paid ($)</label><input type="number" step="0.01" min="0" value="'+c.extra.toFixed(2)+'" placeholder="0.00" data-i="'+i+'" data-field="extra"></div>'+
         '<div class="card-edit-field"><label>Credit Limit ($)</label><input type="number" step="1" min="1" value="'+c.limit+'" data-i="'+i+'" data-field="limit"></div>'+
         '<div class="card-edit-field"><label>APR (%)</label><input type="number" step="0.01" min="0" value="'+c.apr+'" data-i="'+i+'" data-field="apr"></div>'+
-        '<div class="card-edit-field"><label>Min Payment ($)</label><input type="number" step="1" min="0" value="'+c.min+'" data-i="'+i+'" data-field="min"></div>'+
       '</div>';
     body.appendChild(div);
   });
-  body.querySelectorAll('input').forEach(function(inp){
-    inp.addEventListener('input',function(){
-      var i=+inp.dataset.i,field=inp.dataset.field;
-      cardData[i][field]=parseFloat(inp.value)||0;
-      var util=cardData[i].limit>0?Math.max(0,(cardData[i].balance-cardData[i].extra)/cardData[i].limit*100):0;
-      var uColor=utilColor(util);
-      var chip=document.getElementById('utilChip_'+i);
-      if(chip){chip.style.background=uColor+'22';chip.style.color=uColor;chip.textContent=util.toFixed(1)+'% util';}
-      if(field==='apr'){var at=document.getElementById('aprTxt_'+i);if(at)at.textContent=cardData[i].apr+'% APR';}
+
+  body.querySelectorAll('input').forEach(function(inp) {
+    inp.addEventListener('input', function() {
+      var i = +inp.dataset.i, field = inp.dataset.field;
+      cardData[i][field] = parseFloat(inp.value) || 0;
+      var util = cardData[i].limit > 0 ? Math.max(0, cardData[i].balance/cardData[i].limit*100) : 0;
+      var uColor = utilColor(util);
+      var chip = document.getElementById('utilChip_'+i);
+      if (chip) { chip.style.background=uColor+'22'; chip.style.color=uColor; chip.textContent=util.toFixed(1)+'% util'; }
+      if (field==='apr') { var at=document.getElementById('aprTxt_'+i); if(at) at.textContent=cardData[i].apr+'% APR'; }
     });
   });
-  document.getElementById('inputBudget').value=BUDGET.toFixed(2);
+
+  document.getElementById('inputBudget').value = BUDGET.toFixed(2);
+  var sd = START_DATE.toISOString().slice(0,10);
+  document.getElementById('inputStartDate').value = sd;
 }
 
-function renderSummary(schedule){
-  var totalDebt=cardData.reduce(function(s,c){return s+Math.max(0,c.balance-c.extra);},0);
-  var overallUtil=totalLimit()>0?(totalDebt/totalLimit()*100):0;
-  var last=schedule[schedule.length-1];
-  var payoffDate=last?fmtDate(last.date):'--';
-  var totalInterest=schedule.reduce(function(s,p){return s+Object.values(p.interest).reduce(function(a,b){return a+b;},0);},0);
-  document.getElementById('summaryGrid').innerHTML=
+// ── RENDER SUMMARY ─────────────────────────────────────────────────────────
+function renderSummary(schedule) {
+  var totalDebt = cardData.reduce(function(s,c){return s+c.balance;},0);
+  var overallUtil = totalLimit()>0?(totalDebt/totalLimit()*100):0;
+  var last = schedule[schedule.length-1];
+  var payoffDate = last ? fmtDate(last.date) : '--';
+  var totalInterest = schedule.reduce(function(s,p){
+    return s+Object.values(p.interest).reduce(function(a,b){return a+b;},0);
+  },0);
+  document.getElementById('summaryGrid').innerHTML =
     '<div class="stat-card"><div class="stat-label">Total Debt</div><div class="stat-val red">'+fmtMoney(totalDebt)+'</div></div>'+
     '<div class="stat-card"><div class="stat-label">Budget / Paycheck</div><div class="stat-val green">'+fmtMoney(BUDGET)+'</div></div>'+
     '<div class="stat-card"><div class="stat-label">Overall Utilization</div><div class="stat-val yellow">'+overallUtil.toFixed(1)+'%</div></div>'+
     '<div class="stat-card"><div class="stat-label">Paychecks to Freedom</div><div class="stat-val">'+schedule.length+'</div></div>'+
     '<div class="stat-card"><div class="stat-label">Est. Total Interest</div><div class="stat-val red">'+fmtMoney(totalInterest)+'</div></div>'+
     '<div class="stat-card"><div class="stat-label">Est. Payoff Date</div><div class="stat-val">'+payoffDate+'</div></div>';
-  document.getElementById('notebudget').textContent=BUDGET.toFixed(0);
+  document.getElementById('notebudget').textContent = BUDGET.toFixed(0);
 }
 
-function renderUtilBars(){
-  var html='';
+// ── RENDER UTIL BARS ───────────────────────────────────────────────────────
+function renderUtilBars() {
+  var html = '';
   cardData.filter(function(c){return c.balance>0;}).forEach(function(c){
-    var util=c.limit>0?Math.max(0,(c.balance-c.extra)/c.limit*100):0;
-    var uColor=utilColor(util);
-    var warn=util>30?' &mdash; &#9888; Over 30%':'';
-    html+='<div><div class="util-meta"><div class="util-name">'+c.name+'</div><div class="util-pct" style="color:'+uColor+'">'+util.toFixed(1)+'%'+warn+'</div></div><div class="util-bar-bg"><div class="util-bar-fill" style="width:'+Math.min(util,100)+'%;background:'+uColor+'"></div></div></div>';
+    var util = c.limit>0?Math.max(0,c.balance/c.limit*100):0;
+    var uColor = utilColor(util);
+    var warn = util>30?' &mdash; &#9888; Over 30%':'';
+    html += '<div><div class="util-meta"><div class="util-name">'+c.name+'</div><div class="util-pct" style="color:'+uColor+'">'+util.toFixed(1)+'%'+warn+'</div></div><div class="util-bar-bg"><div class="util-bar-fill" style="width:'+Math.min(util,100)+'%;background:'+uColor+'"></div></div></div>';
   });
-  document.getElementById('utilSection').innerHTML=html;
+  document.getElementById('utilSection').innerHTML = html;
 }
 
-function renderStrategy(schedule){
-  if(!schedule.length)return;
-  var order=schedule[0].order.filter(function(k){return cardData.find(function(c){return c.key===k&&c.balance>0;});});
-  var names=order.map(function(k){var c=cardData.find(function(c){return c.key===k;});return c?c.name:null;}).filter(Boolean);
-  document.getElementById('strategyBox').innerHTML='<strong>Strategy: Hybrid (Utilization-First + Avalanche)</strong><br>Apple Card leads &mdash; highest utilization, brought under 30% fast. Remaining cards follow APR descending: '+names.slice(1).join(' &rarr; ')+'. Full '+fmtMoney(BUDGET)+' deployed every paycheck. Surplus waterfalls automatically to next priority card.';
-}
+// ── RENDER SCHEDULE ────────────────────────────────────────────────────────
+function renderSchedule(schedule) {
+  var cardMap = {};
+  cardData.forEach(function(c){cardMap[c.key]=c;});
+  var container = document.getElementById('paycheckList');
+  container.innerHTML = '';
 
-function renderSchedule(schedule){
-  var cardMap={};cardData.forEach(function(c){cardMap[c.key]=c;});
-  var container=document.getElementById('paycheckList');container.innerHTML='';
-  schedule.forEach(function(period,idx){
-    var el=document.createElement('div');el.className='paycheck-card';
-    var badge='';
-    period.order.forEach(function(k){
-      if(period.balsAfter[k]<0.005&&period.payments[k]>0.005)
-        badge='<div class="pc-badge">&#10003; '+cardMap[k].name.split(' ')[0]+' Paid Off</div>';
+  schedule.forEach(function(period) {
+    var periodIdx = period.idx;
+    var el = document.createElement('div');
+    el.className = 'paycheck-card' + (isMarkedPaid(periodIdx, period.focusKey) ? ' period-paid' : '');
+
+    // Payoff badges — one per card paid off this period
+    var badges = '';
+    period.order.forEach(function(k) {
+      if (period.balsAfter[k] < 0.005 && (period.scheduledPayments[k] > 0 || period.extrasApplied[k] > 0)) {
+        badges += '<div class="pc-badge">&#10003; '+cardMap[k].name.split(' ')[0]+' Paid Off</div>';
+      }
     });
-    var payRows='';
-    period.order.forEach(function(k){
-      var c=cardMap[k];if(!c)return;
-      var paid=period.payments[k]||0,bal=period.balsAfter[k]||0,int=period.interest[k]||0;
-      if(paid<0.005&&bal<0.005)return;
-      var isPayoff=bal<0.005&&paid>0.005;
-      var isAboveMin=paid>(c.min+0.01)||k===period.focusKey;
-      var pill=isPayoff?'<span class="pill payoff">PAID OFF</span>':isAboveMin?'<span class="pill focus">FOCUS</span>':'<span class="pill min">MIN</span>';
-      var utilPct=c.limit>0&&bal>0?(bal/c.limit*100):0;
-      var uColor=utilColor(utilPct);
-      payRows+=
+    if (isMarkedPaid(periodIdx, period.focusKey)) {
+      badges += '<div class="pc-badge paid-period">&#10003; Paid</div>';
+    }
+
+    // Payment rows
+    var payRows = '';
+    period.order.forEach(function(k) {
+      var c = cardMap[k]; if (!c) return;
+      var scheduled = period.scheduledPayments[k] || 0;
+      var bal = period.balsAfter[k] || 0;
+      var int = period.interest[k] || 0;
+      if (scheduled < 0.005 && bal < 0.005 && period.extrasApplied[k] < 0.005) return;
+
+      var isPayoff = bal < 0.005 && (scheduled > 0.005 || period.extrasApplied[k] > 0.005);
+      var isFocus = k === period.focusKey;
+      var pill = isPayoff ? '<span class="pill payoff">PAID OFF</span>' : isFocus ? '<span class="pill focus">FOCUS</span>' : '';
+
+      var utilPct = c.limit > 0 && bal > 0 ? (bal/c.limit*100) : 0;
+      var uColor = utilColor(utilPct);
+
+      // Extras log
+      var extras = getExtras(periodIdx, k);
+      var extrasHtml = '';
+      if (extras.length > 0) {
+        extrasHtml = '<div class="extra-payment-log">';
+        extras.forEach(function(e, ei) {
+          extrasHtml += '<div class="extra-entry" id="extraEntry_'+periodIdx+'_'+k+'_'+ei+'">'+
+            '<span class="extra-entry-date">'+e.date+'</span>'+
+            '<span class="extra-entry-amt">+'+fmtMoney(e.amount)+' extra</span>'+
+            '<button class="extra-entry-edit" onclick="editExtra('+periodIdx+',\''+k+'\','+ei+')">edit</button>'+
+          '</div>';
+        });
+        extrasHtml += '</div>';
+      }
+
+      // Mark as paid button (only on focus card)
+      var markPaidHtml = '';
+      if (isFocus) {
+        var isPaid = isMarkedPaid(periodIdx, k);
+        markPaidHtml = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'+
+          '<button class="mark-paid-btn'+(isPaid?' paid':'')+'" onclick="toggleMarkPaid('+periodIdx+',\''+k+'\')">'+(isPaid?'Scheduled Payment Paid':'Mark as Paid')+' &mdash; '+fmtMoney(scheduled)+'</button>'+
+        '</div>';
+      }
+
+      payRows +=
         '<div class="pay-row">'+
           '<div class="pay-row-top">'+
             '<div><div class="pay-row-name">'+c.name+'</div><div class="pay-row-apr">'+c.apr+'% APR</div></div>'+
             pill+
           '</div>'+
           '<div class="pay-row-stats">'+
-            '<div><div class="pay-stat-label">Payment</div><div class="pay-stat-val green">'+fmtMoney(paid)+'</div></div>'+
+            '<div><div class="pay-stat-label">Scheduled</div><div class="pay-stat-val green">'+fmtMoney(scheduled)+'</div></div>'+
             '<div><div class="pay-stat-label">Interest</div><div class="pay-stat-val red">+'+fmtMoney(int)+'</div></div>'+
             '<div><div class="pay-stat-label">Bal After</div><div class="pay-stat-val muted">'+fmtMoney(bal)+'</div></div>'+
             '<div><div class="pay-stat-label">Util After</div><div class="pay-stat-val" style="color:'+uColor+'">'+utilPct.toFixed(1)+'%</div></div>'+
           '</div>'+
+          '<div class="payment-actions">'+
+            markPaidHtml+
+            extrasHtml+
+            '<div class="add-extra-row">'+
+              '<input class="add-extra-input" type="number" step="0.01" min="0" placeholder="Extra payment amount..." id="extraInput_'+periodIdx+'_'+k+'">'+
+              '<button class="add-extra-btn" onclick="addExtra('+periodIdx+',\''+k+'\')">+ Add Extra</button>'+
+            '</div>'+
+          '</div>'+
         '</div>';
     });
-    var utilBars='';
+
+    var totalDebtAfter = cardData.reduce(function(s,c){return s+(period.balsAfter[c.key]||0);},0);
+    var overallUtil = totalLimit()>0?(totalDebtAfter/totalLimit()*100):0;
+
+    var utilBars = '';
     period.order.forEach(function(k){
-      var c=cardMap[k];if(!c)return;
-      var bal=period.balsAfter[k]||0,pct=c.limit>0?(bal/c.limit*100):0,uColor=utilColor(pct);
+      var c=cardMap[k]; if(!c) return;
+      var bal=period.balsAfter[k]||0, pct=c.limit>0?(bal/c.limit*100):0, uColor=utilColor(pct);
       utilBars+='<div class="mini-util-row"><div class="mini-util-name">'+c.name+'</div><div class="mini-util-bar-bg"><div class="mini-util-bar-fill" style="width:'+Math.min(pct,100).toFixed(1)+'%;background:'+uColor+'"></div></div><div class="mini-util-pct" style="color:'+uColor+'">'+pct.toFixed(1)+'%</div></div>';
     });
-    var totalDebtAfter=cardData.reduce(function(s,c){return s+(period.balsAfter[c.key]||0);},0);
-    var overallUtil=totalLimit()>0?(totalDebtAfter/totalLimit()*100):0;
-    el.innerHTML=
+
+    el.innerHTML =
       '<div class="pc-header">'+
         '<div class="pc-left">'+
-          '<div class="pc-num">Pay '+String(idx+1).padStart(2,'0')+'</div>'+
-          '<div class="pc-date">'+fmtDate(period.date)+'</div>'+badge+
+          '<div class="pc-num">Pay '+String(periodIdx+1).padStart(2,'0')+'</div>'+
+          '<div class="pc-date">'+fmtDate(period.date)+'</div>'+
+          '<div class="pc-badges">'+badges+'</div>'+
         '</div>'+
-        '<div class="pc-right"><div class="pc-total">'+fmtMoney(period.totalPaid)+'</div><div class="chevron">&#9662;</div></div>'+
+        '<div class="pc-right"><div class="pc-total">'+fmtMoney(BUDGET)+'</div><div class="chevron">&#9662;</div></div>'+
       '</div>'+
       '<div class="pc-body">'+
         '<div class="pay-rows">'+payRows+'</div>'+
-        '<div class="pc-footer"><div>Total paid: <span>'+fmtMoney(period.totalPaid)+'</span></div><div>Remaining: <span>'+fmtMoney(totalDebtAfter)+'</span></div><div>Overall util: <span style="color:'+utilColor(overallUtil)+'">'+overallUtil.toFixed(1)+'%</span></div></div>'+
+        '<div class="pc-footer">'+
+          '<div>Scheduled: <span>'+fmtMoney(BUDGET)+'</span></div>'+
+          '<div>Remaining debt: <span>'+fmtMoney(totalDebtAfter)+'</span></div>'+
+          '<div>Overall util: <span style="color:'+utilColor(overallUtil)+'">'+overallUtil.toFixed(1)+'%</span></div>'+
+        '</div>'+
         '<div class="util-after"><div class="util-after-title">Utilization After This Paycheck</div>'+utilBars+'</div>'+
       '</div>';
-    el.querySelector('.pc-header').addEventListener('click',function(){
-      var b=el.querySelector('.pc-body'),open=b.classList.toggle('visible');
-      el.querySelector('.pc-header').classList.toggle('open',open);
+
+    el.querySelector('.pc-header').addEventListener('click', function(e) {
+      if (e.target.closest('button') || e.target.closest('input')) return;
+      var b = el.querySelector('.pc-body'), open = b.classList.toggle('visible');
+      el.querySelector('.pc-header').classList.toggle('open', open);
     });
-    if(idx===0){el.querySelector('.pc-body').classList.add('visible');el.querySelector('.pc-header').classList.add('open');}
+
+    if (periodIdx === 0) {
+      el.querySelector('.pc-body').classList.add('visible');
+      el.querySelector('.pc-header').classList.add('open');
+    }
+
     container.appendChild(el);
   });
-  var last=schedule[schedule.length-1];
-  var totalInterest=schedule.reduce(function(s,p){return s+Object.values(p.interest).reduce(function(a,b){return a+b;},0);},0);
-  document.getElementById('celebration').innerHTML=last?'<h3>&#127919; Debt Free by '+fmtDate(last.date)+'</h3><p>'+schedule.length+' paychecks &middot; ~'+fmtMoney(totalInterest)+' estimated interest &middot; '+fmtMoney(totalLimit())+' total credit line cleared</p>':'';
+
+  var last = schedule[schedule.length-1];
+  var totalInterest = schedule.reduce(function(s,p){return s+Object.values(p.interest).reduce(function(a,b){return a+b;},0);},0);
+  document.getElementById('celebration').innerHTML = last ?
+    '<h3>&#127919; Debt Free by '+fmtDate(last.date)+'</h3><p>'+schedule.length+' paychecks &middot; ~'+fmtMoney(totalInterest)+' estimated interest &middot; '+fmtMoney(totalLimit())+' total credit line cleared</p>' : '';
 }
 
-function saveState(){
-  try{
-    localStorage.setItem("debtplan_v1",JSON.stringify({cardData:cardData,budget:BUDGET,startDate:START_DATE.toISOString()}));
-  }catch(e){}
+// ── PAYMENT ACTIONS ────────────────────────────────────────────────────────
+function ensurePayment(periodIdx, cardKey) {
+  if (!payments[periodIdx]) payments[periodIdx] = {};
+  if (!payments[periodIdx][cardKey]) payments[periodIdx][cardKey] = {paid:false, extras:[]};
 }
 
-function loadState(){
-  try{
-    var raw=localStorage.getItem("debtplan_v1");
-    if(!raw)return false;
-    var s=JSON.parse(raw);
-    if(s.cardData&&s.cardData.length===cardData.length){
-      s.cardData.forEach(function(saved,i){
-        cardData[i].balance=typeof saved.balance==="number"?saved.balance:cardData[i].balance;
-        cardData[i].extra=typeof saved.extra==="number"?saved.extra:0;
-        cardData[i].limit=typeof saved.limit==="number"?saved.limit:cardData[i].limit;
-        cardData[i].apr=typeof saved.apr==="number"?saved.apr:cardData[i].apr;
-        cardData[i].min=typeof saved.min==="number"?saved.min:cardData[i].min;
-      });
-    }
-    if(typeof s.budget==="number")BUDGET=s.budget;
-    if(s.startDate)START_DATE=new Date(s.startDate);
-    var sd=START_DATE.toISOString().slice(0,10);
-    var sdi=document.getElementById("inputStartDate");
-    if(sdi)sdi.value=sd;
-    return true;
-  }catch(e){return false;}
+function toggleMarkPaid(periodIdx, cardKey) {
+  ensurePayment(periodIdx, cardKey);
+  payments[periodIdx][cardKey].paid = !payments[periodIdx][cardKey].paid;
+  saveState();
+  fullRender();
+  showToast(payments[periodIdx][cardKey].paid ? 'Payment marked as paid!' : 'Payment unmarked');
 }
 
-function fullRender(){
-  var schedule=buildSchedule();
-  renderSummary(schedule);renderUtilBars();renderStrategy(schedule);renderSchedule(schedule);
+function addExtra(periodIdx, cardKey) {
+  var input = document.getElementById('extraInput_'+periodIdx+'_'+cardKey);
+  var amt = parseFloat(input.value);
+  if (!amt || amt <= 0) { showToast('Enter a valid amount'); return; }
+  ensurePayment(periodIdx, cardKey);
+  var now = new Date();
+  payments[periodIdx][cardKey].extras.push({
+    date: fmtDateShort(now),
+    amount: amt
+  });
+  saveState();
+  fullRender();
+  showToast(fmtMoney(amt)+' extra logged!');
 }
 
-document.querySelectorAll('.col-header').forEach(function(header){
-  header.addEventListener('click',function(){
-    var target=document.getElementById(header.dataset.target);if(!target)return;
-    var collapsed=target.classList.toggle('hidden');
-    header.classList.toggle('collapsed',collapsed);
+function editExtra(periodIdx, cardKey, extraIdx) {
+  var entryId = 'extraEntry_'+periodIdx+'_'+cardKey+'_'+extraIdx;
+  var entry = document.getElementById(entryId);
+  if (!entry) return;
+  var current = payments[periodIdx][cardKey].extras[extraIdx].amount;
+  entry.innerHTML =
+    '<span class="extra-entry-date">'+payments[periodIdx][cardKey].extras[extraIdx].date+'</span>'+
+    '<input class="extra-entry-input" type="number" step="0.01" value="'+current.toFixed(2)+'" id="editInput_'+periodIdx+'_'+cardKey+'_'+extraIdx+'">'+
+    '<button class="extra-entry-edit" onclick="saveExtra('+periodIdx+',\''+cardKey+'\','+extraIdx+')">save</button>'+
+    '<button class="extra-entry-edit" style="color:var(--accent2)" onclick="deleteExtra('+periodIdx+',\''+cardKey+'\','+extraIdx+')">del</button>';
+}
+
+function saveExtra(periodIdx, cardKey, extraIdx) {
+  var input = document.getElementById('editInput_'+periodIdx+'_'+cardKey+'_'+extraIdx);
+  var amt = parseFloat(input.value);
+  if (!amt || amt < 0) { showToast('Enter a valid amount'); return; }
+  payments[periodIdx][cardKey].extras[extraIdx].amount = amt;
+  saveState();
+  fullRender();
+  showToast('Payment updated!');
+}
+
+function deleteExtra(periodIdx, cardKey, extraIdx) {
+  payments[periodIdx][cardKey].extras.splice(extraIdx, 1);
+  saveState();
+  fullRender();
+  showToast('Payment removed');
+}
+
+// ── FULL RENDER ────────────────────────────────────────────────────────────
+function fullRender() {
+  var schedule = buildSchedule();
+  renderSummary(schedule);
+  renderUtilBars();
+  renderSchedule(schedule);
+}
+
+// ── COLLAPSIBLE ────────────────────────────────────────────────────────────
+document.querySelectorAll('.col-header').forEach(function(header) {
+  header.addEventListener('click', function() {
+    var target = document.getElementById(header.dataset.target);
+    if (!target) return;
+    var collapsed = target.classList.toggle('hidden');
+    header.classList.toggle('collapsed', collapsed);
   });
 });
 
-document.getElementById('editToggle').addEventListener('click',function(){
-  var body=document.getElementById('editBody');
-  var chevron=document.getElementById('editChevron');
-  var hint=document.getElementById('editHint');
-  var open=body.classList.toggle('open');
-  chevron.style.transform=open?'rotate(180deg)':'';
-  hint.textContent=open?'tap to close':'tap to edit';
+// ── EDIT PANEL ─────────────────────────────────────────────────────────────
+document.getElementById('editToggle').addEventListener('click', function() {
+  var body = document.getElementById('editBody');
+  var chevron = document.getElementById('editChevron');
+  var hint = document.getElementById('editHint');
+  var open = body.classList.toggle('open');
+  chevron.style.transform = open ? 'rotate(180deg)' : '';
+  hint.textContent = open ? 'tap to close' : 'tap to edit';
 });
 
-document.getElementById('applyBtn').addEventListener('click',function(){
-  BUDGET=parseFloat(document.getElementById('inputBudget').value)||650;
-  var dv=document.getElementById('inputStartDate').value;
-  if(dv)START_DATE=new Date(dv+'T00:00:00');
-  fullRender();
-  var badge=document.getElementById('liveBadge');
-  badge.classList.add('show');setTimeout(function(){badge.classList.remove('show');},2500);
+document.getElementById('applyBtn').addEventListener('click', function() {
+  BUDGET = parseFloat(document.getElementById('inputBudget').value) || 650;
+  var dv = document.getElementById('inputStartDate').value;
+  if (dv) START_DATE = new Date(dv+'T00:00:00');
   saveState();
+  fullRender();
+  var badge = document.getElementById('liveBadge');
+  badge.classList.add('show');
+  setTimeout(function(){ badge.classList.remove('show'); }, 2500);
   document.getElementById('editBody').classList.remove('open');
-  document.getElementById('editChevron').style.transform='';
-  document.getElementById('editHint').textContent='tap to edit';
+  document.getElementById('editChevron').style.transform = '';
+  document.getElementById('editHint').textContent = 'tap to edit';
 });
 
+// ── INIT ───────────────────────────────────────────────────────────────────
 loadState();
 renderEditor();
 fullRender();
