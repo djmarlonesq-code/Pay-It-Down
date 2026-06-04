@@ -178,6 +178,43 @@
   <div class="subtitle">Avalanche strategy &middot; Bi-weekly &middot; Starting 06/05/2026</div>
 </header>
 
+<!-- SUMMARY -->
+<div class="collapsible-section">
+  <div class="col-header" data-target="secSummary">
+    <span class="col-header-label">Summary</span>
+    <div class="col-line"></div>
+    <span class="col-chevron">&#9662;</span>
+  </div>
+  <div class="col-body" id="secSummary">
+    <div class="summary-grid" id="summaryGrid"></div>
+  </div>
+</div>
+
+<!-- UTILIZATION -->
+<div class="collapsible-section">
+  <div class="col-header" data-target="secUtil">
+    <span class="col-header-label">Current Utilization</span>
+    <div class="col-line"></div>
+    <span class="col-chevron">&#9662;</span>
+  </div>
+  <div class="col-body" id="secUtil">
+    <div class="util-section" id="utilSection"></div>
+  </div>
+</div>
+
+<!-- PAYCHECK PLAN -->
+<div class="collapsible-section">
+  <div class="col-header" data-target="secPlan">
+    <span class="col-header-label">Paycheck-by-Paycheck Plan</span>
+    <div class="col-line"></div>
+    <span class="col-chevron">&#9662;</span>
+  </div>
+  <div class="col-body" id="secPlan">
+    <div class="paycheck-list" id="paycheckList"></div>
+    <div class="payoff-celebration" id="celebration"></div>
+  </div>
+</div>
+
 <!-- CARD DATA -->
 <div class="collapsible-section">
   <div class="col-header collapsed" data-target="secCardData">
@@ -213,43 +250,6 @@
         <button class="apply-btn" id="applyBtn">&#8635; Recalculate Plan</button>
       </div>
     </div>
-  </div>
-</div>
-
-<!-- SUMMARY -->
-<div class="collapsible-section">
-  <div class="col-header collapsed" data-target="secSummary">
-    <span class="col-header-label">Summary</span>
-    <div class="col-line"></div>
-    <span class="col-chevron">&#9662;</span>
-  </div>
-  <div class="col-body hidden" id="secSummary">
-    <div class="summary-grid" id="summaryGrid"></div>
-  </div>
-</div>
-
-<!-- UTILIZATION -->
-<div class="collapsible-section">
-  <div class="col-header" data-target="secUtil">
-    <span class="col-header-label">Current Utilization</span>
-    <div class="col-line"></div>
-    <span class="col-chevron">&#9662;</span>
-  </div>
-  <div class="col-body" id="secUtil">
-    <div class="util-section" id="utilSection"></div>
-  </div>
-</div>
-
-<!-- PAYCHECK PLAN -->
-<div class="collapsible-section">
-  <div class="col-header" data-target="secPlan">
-    <span class="col-header-label">Paycheck-by-Paycheck Plan</span>
-    <div class="col-line"></div>
-    <span class="col-chevron">&#9662;</span>
-  </div>
-  <div class="col-body" id="secPlan">
-    <div class="paycheck-list" id="paycheckList"></div>
-    <div class="payoff-celebration" id="celebration"></div>
   </div>
 </div>
 
@@ -395,34 +395,29 @@ function buildSchedule() {
       scheduledPayments[focusKey] = +Math.min(BUDGET, bals[focusKey]).toFixed(2);
     }
 
-    // Apply scheduled payment if marked paid
-    var totalScheduled = scheduledPayments[focusKey] || 0;
     var periodIdx = i;
-    var scheduledApplied = isMarkedPaid(periodIdx, focusKey) ? totalScheduled : 0;
+
+    // Always apply scheduled payment for projection (Mark as Paid is tracking only)
+    var totalScheduled = scheduledPayments[focusKey] || 0;
+    if (totalScheduled > 0) {
+      bals[focusKey] = +Math.max(0, bals[focusKey] - totalScheduled).toFixed(2);
+    }
 
     // Apply extras for all cards
     var extrasApplied = {};
     cardData.forEach(function(c){
       extrasApplied[c.key] = Math.min(getExtrasPaid(periodIdx, c.key), bals[c.key]);
-    });
-
-    // Update balances
-    if (scheduledApplied > 0) {
-      bals[focusKey] = +Math.max(0, bals[focusKey] - scheduledApplied).toFixed(2);
-    }
-    cardData.forEach(function(c){
       if (extrasApplied[c.key] > 0) {
         bals[c.key] = +Math.max(0, bals[c.key] - extrasApplied[c.key]).toFixed(2);
       }
     });
 
-    var totalPaidThisPeriod = scheduledApplied + cardData.reduce(function(s,c){return s+extrasApplied[c.key];},0);
+    var totalPaidThisPeriod = totalScheduled + cardData.reduce(function(s,c){return s+extrasApplied[c.key];},0);
 
     periods.push({
       idx: i,
       date: new Date(date),
       scheduledPayments: scheduledPayments,
-      scheduledApplied: scheduledApplied,
       extrasApplied: extrasApplied,
       interest: periodInterest,
       balsAfter: Object.assign({},bals),
@@ -627,7 +622,10 @@ function renderSchedule(schedule) {
       el.querySelector('.pc-header').classList.toggle('open', open);
     });
 
-    if (periodIdx === 0) {
+    // Only open the first upcoming unpaid period
+    var today = new Date();
+    var isPastPaid = isMarkedPaid(periodIdx, period.focusKey) && period.date < today;
+    if (periodIdx === 0 && !isPastPaid) {
       el.querySelector('.pc-body').classList.add('visible');
       el.querySelector('.pc-header').classList.add('open');
     }
