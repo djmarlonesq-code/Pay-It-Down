@@ -569,7 +569,7 @@ function renderSchedule(schedule) {
       var int = period.interest[k] || 0;
       if (scheduled < 0.005 && bal < 0.005) return;
 
-      var isPayoff = bal < 0.005 && scheduled > 0.005;
+      var isPayoff = getDynamicBalance(k) < 0.005;
       var isFocus = scheduled > 0.005;
       var pill = isPayoff ? '<span class="pill payoff">PAID OFF</span>' : isFocus ? '<span class="pill focus">FOCUS</span>' : '';
       var dynBal = getDynamicBalance(k);
