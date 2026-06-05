@@ -398,9 +398,9 @@ function getPriorityOrder(bals) {
 
 // ── BUILD SCHEDULE ─────────────────────────────────────────────────────────
 function buildSchedule() {
-  // Simple forward projection from current dynamic balances
+  // Always start from startBal — schedule manages its own running balances
   var bals = {};
-  cardData.forEach(function(c){ bals[c.key] = getDynamicBalance(c.key); });
+  cardData.forEach(function(c){ bals[c.key] = Math.max(0, c.startBal); });
   var order = getPriorityOrder(bals);
   var periods = [];
   var date = new Date(START_DATE);
@@ -411,13 +411,13 @@ function buildSchedule() {
 
     var focusKey = order.find(function(k){return bals[k]>0.005;});
 
-    // Interest estimate (informational only)
+    // Interest estimate (informational only, not applied to balances)
     var periodInterest = {};
     cardData.forEach(function(c){
       periodInterest[c.key] = bals[c.key]>0 ? interest14(bals[c.key], c.apr) : 0;
     });
 
-    // Waterfall scheduled payments
+    // Waterfall: full BUDGET across cards in priority order
     var scheduledPayments = {};
     cardData.forEach(function(c){scheduledPayments[c.key]=0;});
     var tempBals = Object.assign({}, bals);
@@ -434,7 +434,7 @@ function buildSchedule() {
       }
     }
 
-    // balsAfter = current balance minus scheduled payment (simple)
+    // balsAfter = balance minus scheduled payment for this period
     var balsAfter = {};
     cardData.forEach(function(c){
       balsAfter[c.key] = +Math.max(0, bals[c.key] - (scheduledPayments[c.key]||0)).toFixed(2);
@@ -450,7 +450,7 @@ function buildSchedule() {
       order: order.slice()
     });
 
-    // Advance balances for next period
+    // Advance running balances for next period
     cardData.forEach(function(c){ bals[c.key] = balsAfter[c.key]; });
     order = getPriorityOrder(bals);
     date = addDays(date, 14);
@@ -569,11 +569,10 @@ function renderSchedule(schedule) {
       var int = period.interest[k] || 0;
       if (scheduled < 0.005 && bal < 0.005) return;
 
-      var isPayoff = getDynamicBalance(k) < 0.005;
+      var isPayoff = bal < 0.005 && scheduled > 0.005;
       var isFocus = scheduled > 0.005;
       var pill = isPayoff ? '<span class="pill payoff">PAID OFF</span>' : isFocus ? '<span class="pill focus">FOCUS</span>' : '';
-      var dynBal = getDynamicBalance(k);
-      var utilPct = c.limit>0&&dynBal>0 ? (dynBal/c.limit*100) : 0;
+      var utilPct = c.limit>0&&bal>0 ? (bal/c.limit*100) : 0;
       var uColor = utilColor(utilPct);
 
       // Extras
@@ -608,8 +607,8 @@ function renderSchedule(schedule) {
           '</div>'+
           '<div class="pay-row-stats">'+
             '<div><div class="pay-stat-label">Scheduled</div><div class="pay-stat-val green">'+fmtMoney(scheduled)+'</div></div>'+
-            '<div><div class="pay-stat-label">Interest (est)</div><div class="pay-stat-val red">'+(isMarkedPaid(periodIdx,period.focusKey)?'+'+fmtMoney(int):'--')+'</div></div>'+
-            '<div><div class="pay-stat-label">Bal After</div><div class="pay-stat-val muted">'+fmtMoney(getDynamicBalance(k))+'</div></div>'+
+            '<div><div class="pay-stat-label">Interest (est)</div><div class="pay-stat-val red">+'+fmtMoney(int)+'</div></div>'+
+            '<div><div class="pay-stat-label">Bal After</div><div class="pay-stat-val muted">'+fmtMoney(bal)+'</div></div>'+
             '<div><div class="pay-stat-label">Util After</div><div class="pay-stat-val" style="color:'+uColor+'">'+utilPct.toFixed(1)+'%</div></div>'+
           '</div>'+
           '<div class="payment-actions">'+
