@@ -656,8 +656,11 @@ function renderSchedule(schedule) {
       // For past/current periods use actual dynamic balance (accounts for extras)
       var dynBalNow = getDynamicBalance(k);
       var bal = (period.idx <= nowPeriodIdx()) ? dynBalNow : (period.balsAfter[k] || 0);
-      var hasExtras = getExtras(periodIdx, k).length > 0;
-      if (scheduled < 0.005 && bal < 0.005 && !hasExtras) return;
+      // Check extras across ALL periods for this card
+      var hasExtrasAnywhere = Object.keys(payments).some(function(pid){
+        return payments[pid][k] && payments[pid][k].extras && payments[pid][k].extras.length > 0;
+      });
+      if (scheduled < 0.005 && bal < 0.005 && !hasExtrasAnywhere) return;
 
       var isPayoff = bal < 0.005 && scheduled > 0.005;
       var isFocus = scheduled > 0.005;
@@ -667,7 +670,14 @@ function renderSchedule(schedule) {
       var uColor = utilColor(utilPct);
 
       // Extras
-      var extras = getExtras(periodIdx, k);
+      // Show extras from all periods for this card
+      var allExtras = [];
+      Object.keys(payments).sort().forEach(function(pid){
+        if(payments[pid][k]&&payments[pid][k].extras){
+          payments[pid][k].extras.forEach(function(e){allExtras.push({e:e,pid:parseInt(pid)});});
+        }
+      });
+      var extras = allExtras.map(function(x){return x.e;});
       var extrasHtml = '';
       if (extras.length > 0) {
         extrasHtml = '<div class="extra-payment-log">';
