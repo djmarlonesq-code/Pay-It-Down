@@ -649,13 +649,17 @@ function renderSchedule(schedule) {
     var anyPaid = isMarkedPaid(periodIdx, period.focusKey);
     el.className = 'paycheck-card' + (anyPaid ? ' period-paid' : '');
 
-    // Payoff badges
+    // Payoff badges - only show in the period where payoff actually happened
     var badges = '';
     period.order.forEach(function(k) {
       var dynB = getDynamicBalance(k);
-      if (dynB < 0.01)
-        badges += '<div class="pc-badge">&#10003; '+cardMap[k].name.split(' ')[0]+' Paid Off</div>';
-      else if (period.balsAfter[k] < 0.005 && period.scheduledPayments[k] > 0.005)
+      // Check if this card was paid off THIS period via extras
+      var extrasThisPeriod = getExtras(periodIdx, k).reduce(function(s,e){return s+e.amount;},0);
+      var balBeforeThisPeriod = dynB + extrasThisPeriod + (isMarkedPaid(periodIdx,k)?(payments[String(periodIdx)]&&payments[String(periodIdx)][k]?payments[String(periodIdx)][k].scheduledAmt||0:0):0);
+      var paidOffThisPeriod = dynB < 0.01 && balBeforeThisPeriod >= 0.01;
+      // Also show for scheduled payoffs
+      var scheduledPayoff = period.balsAfter[k] < 0.005 && period.scheduledPayments[k] > 0.005;
+      if (paidOffThisPeriod || scheduledPayoff)
         badges += '<div class="pc-badge">&#10003; '+cardMap[k].name.split(' ')[0]+' Paid Off</div>';
     });
     if (anyPaid) badges += '<div class="pc-badge paid-period">&#10003; Paid</div>';
