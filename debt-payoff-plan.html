@@ -657,8 +657,8 @@ function renderSchedule(schedule) {
       var extrasThisPeriod = getExtras(periodIdx, k).reduce(function(s,e){return s+e.amount;},0);
       var balBeforeThisPeriod = dynB + extrasThisPeriod + (isMarkedPaid(periodIdx,k)?(payments[String(periodIdx)]&&payments[String(periodIdx)][k]?payments[String(periodIdx)][k].scheduledAmt||0:0):0);
       var paidOffThisPeriod = dynB < 0.01 && balBeforeThisPeriod >= 0.01;
-      // Also show for scheduled payoffs
-      var scheduledPayoff = period.balsAfter[k] < 0.005 && period.scheduledPayments[k] > 0.005;
+      // Show for scheduled payoffs only if not already paid off via extras earlier
+      var scheduledPayoff = period.balsAfter[k] < 0.005 && period.scheduledPayments[k] > 0.005 && balBeforeThisPeriod >= 0.01;
       if (paidOffThisPeriod || scheduledPayoff)
         badges += '<div class="pc-badge">&#10003; '+cardMap[k].name.split(' ')[0]+' Paid Off</div>';
     });
