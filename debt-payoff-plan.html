@@ -398,7 +398,13 @@ function loadState() {
     }
     if (typeof s.budget === 'number') BUDGET = s.budget;
     if (s.startDate) START_DATE = new Date(s.startDate);
-    if (s.payments) payments = s.payments;
+    if (s.payments) {
+      // Normalize all keys to strings to avoid type mismatch
+      payments = {};
+      Object.keys(s.payments).forEach(function(k){
+        payments[String(k)] = s.payments[k];
+      });
+    }
     if (s.balanceLocks) balanceLocks = s.balanceLocks;
     if (s.openPeriods) openPeriods = s.openPeriods;
   } catch(e) {}
@@ -459,17 +465,20 @@ function getExtrasPaid(periodIdx, cardKey) {
   return p[cardKey].extras.reduce(function(s,e){return s+e.amount;},0);
 }
 function getExtras(periodIdx, cardKey) {
-  var p = payments[periodIdx];
+  var p = payments[String(periodIdx)] || payments[periodIdx];
   if (!p || !p[cardKey] || !p[cardKey].extras) return [];
   return p[cardKey].extras;
 }
 function isMarkedPaid(periodIdx, cardKey) {
-  var p = payments[periodIdx];
+  var p = payments[String(periodIdx)] || payments[periodIdx];
   return p && p[cardKey] && p[cardKey].paid === true;
 }
 function ensurePayment(periodIdx, cardKey) {
-  if (!payments[periodIdx]) payments[periodIdx] = {};
-  if (!payments[periodIdx][cardKey]) payments[periodIdx][cardKey] = {paid:false, scheduledAmt:0, extras:[]};
+  var key = String(periodIdx);
+  if (!payments[key]) payments[key] = {};
+  if (!payments[key][cardKey]) payments[key][cardKey] = {paid:false, scheduledAmt:0, extras:[]};
+  // Also set on numeric key for backward compat
+  payments[periodIdx] = payments[key];
 }
 
 // ── PRIORITY ORDER ─────────────────────────────────────────────────────────
@@ -783,8 +792,8 @@ function renderSchedule(schedule) {
 function toggleMarkPaid(periodIdx, cardKey, scheduledAmt) {
   ensurePayment(periodIdx, cardKey);
   var wasP = payments[periodIdx][cardKey].paid;
-  payments[periodIdx][cardKey].paid = !wasP;
-  if (!wasP) payments[periodIdx][cardKey].scheduledAmt = scheduledAmt;
+  payments[String(periodIdx)][cardKey].paid = !wasP;
+  if (!wasP) payments[String(periodIdx)][cardKey].scheduledAmt = scheduledAmt;
   saveState();
   fullRender();
   showToast(!wasP ? 'Payment logged!' : 'Payment removed');
@@ -795,7 +804,7 @@ function addExtra(periodIdx, cardKey) {
   var amt = parseFloat(inp.value);
   if (!amt || amt <= 0) { showToast('Enter a valid amount'); return; }
   ensurePayment(periodIdx, cardKey);
-  payments[periodIdx][cardKey].extras.push({date: fmtDateShort(new Date()), amount: amt});
+  payments[String(periodIdx)][cardKey].extras.push({date: fmtDateShort(new Date()), amount: amt});
   // Auto-mark scheduled payment as paid if extras bring balance to zero
   var newBal = getDynamicBalance(cardKey);
   if (newBal < 0.01 && !payments[periodIdx][cardKey].paid) {
