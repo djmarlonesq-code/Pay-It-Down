@@ -424,6 +424,12 @@ function showToast(msg) {
 
 // ── DYNAMIC BALANCE ────────────────────────────────────────────────────────
 // Current balance = startBal - all logged payments (scheduled marked paid + all extras)
+function nowPeriodIdx(){
+  var now=new Date();
+  var diff=now-START_DATE;
+  return Math.floor(diff/(14*24*3600*1000));
+}
+
 function getDynamicBalance(cardKey) {
   var card = cardData.find(function(c){return c.key===cardKey;});
   var base = card.startBal;
@@ -646,13 +652,16 @@ function renderSchedule(schedule) {
     period.order.forEach(function(k) {
       var c = cardMap[k]; if (!c) return;
       var scheduled = period.scheduledPayments[k] || 0;
-      var bal = period.balsAfter[k] || 0;
       var int = period.interest[k] || 0;
+      // For past/current periods use actual dynamic balance (accounts for extras)
+      var dynBalNow = getDynamicBalance(k);
+      var bal = (period.idx <= nowPeriodIdx()) ? dynBalNow : (period.balsAfter[k] || 0);
       if (scheduled < 0.005 && bal < 0.005) return;
 
       var isPayoff = bal < 0.005 && scheduled > 0.005;
       var isFocus = scheduled > 0.005;
-      var pill = isPayoff ? '<span class="pill payoff">PAID OFF</span>' : isFocus ? '<span class="pill focus">FOCUS</span>' : '';
+      var isPaidOffNow = bal < 0.01;
+      var pill = (isPayoff||isPaidOffNow) ? '<span class="pill payoff">PAID OFF</span>' : isFocus ? '<span class="pill focus">FOCUS</span>' : '';
       var utilPct = c.limit>0&&bal>0 ? (bal/c.limit*100) : 0;
       var uColor = utilColor(utilPct);
 
@@ -674,8 +683,11 @@ function renderSchedule(schedule) {
 
       // Mark as paid (only on cards with scheduled payments)
       var markHtml = '';
-      if (scheduled > 0.005) {
-        var isPaid = isMarkedPaid(periodIdx, k);
+      var isPaid = isMarkedPaid(periodIdx, k);
+      if (isPaidOffNow && !isPaid) {
+        // Auto show as paid if balance is zero from extras
+        markHtml = '<button class="mark-paid-btn paid" style="pointer-events:none;">&#10003; Paid Off via Extra Payments</button>';
+      } else if (scheduled > 0.005) {
         markHtml =
           '<button class="mark-paid-btn'+(isPaid?' paid':'')+'" onclick="toggleMarkPaid('+periodIdx+',\''+k+'\','+scheduled+')">'+(isPaid?'&#10003; Scheduled Paid':'Mark as Paid')+' &mdash; '+fmtMoney(scheduled)+'</button>';
       }
