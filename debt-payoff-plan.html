@@ -497,8 +497,7 @@ function getPriorityOrder(bals) {
 function buildSchedule() {
   // Always start from startBal — schedule manages its own running balances
   var bals = {};
-  // Use actual dynamic balance as starting point to account for extra payments
-  cardData.forEach(function(c){ bals[c.key] = getDynamicBalance(c.key); });
+  cardData.forEach(function(c){ bals[c.key] = Math.max(0, c.startBal); });
   var order = getPriorityOrder(bals);
   var periods = [];
   var date = new Date(START_DATE);
@@ -653,7 +652,10 @@ function renderSchedule(schedule) {
     // Payoff badges
     var badges = '';
     period.order.forEach(function(k) {
-      if (period.balsAfter[k] < 0.005 && period.scheduledPayments[k] > 0.005)
+      var dynB = getDynamicBalance(k);
+      if (dynB < 0.01)
+        badges += '<div class="pc-badge">&#10003; '+cardMap[k].name.split(' ')[0]+' Paid Off</div>';
+      else if (period.balsAfter[k] < 0.005 && period.scheduledPayments[k] > 0.005)
         badges += '<div class="pc-badge">&#10003; '+cardMap[k].name.split(' ')[0]+' Paid Off</div>';
     });
     if (anyPaid) badges += '<div class="pc-badge paid-period">&#10003; Paid</div>';
@@ -668,10 +670,11 @@ function renderSchedule(schedule) {
       var dynBalNow = getDynamicBalance(k);
       // Use dynamic balance for all past/present periods (always show actual paid amounts)
       var bal = dynBalNow < (period.balsAfter[k] || 0) ? dynBalNow : (period.balsAfter[k] || 0);
-      // Check extras across ALL periods for this card
-      var hasExtrasAnywhere = Object.keys(payments).some(function(pid){
-        return payments[pid][k] && payments[pid][k].extras && payments[pid][k].extras.length > 0;
-      });
+      // Check extras for this period only (for display)
+      var hasExtrasAnywhere = getExtras(periodIdx, k).length > 0;
+      // For future periods, skip cards already paid off via extras
+      var isFuturePeriod = period.idx > nowPeriodIdx();
+      if (isFuturePeriod && getDynamicBalance(k) < 0.01) return;
       if (scheduled < 0.005 && bal < 0.005 && !hasExtrasAnywhere) return;
 
       var isPayoff = bal < 0.005 && scheduled > 0.005;
@@ -681,15 +684,8 @@ function renderSchedule(schedule) {
       var utilPct = c.limit>0&&bal>0 ? (bal/c.limit*100) : 0;
       var uColor = utilColor(utilPct);
 
-      // Extras
-      // Show extras from all periods for this card
-      var allExtras = [];
-      Object.keys(payments).sort().forEach(function(pid){
-        if(payments[pid][k]&&payments[pid][k].extras){
-          payments[pid][k].extras.forEach(function(e){allExtras.push({e:e,pid:parseInt(pid)});});
-        }
-      });
-      var extras = allExtras.map(function(x){return x.e;});
+      // Extras - only show for this specific period
+      var extras = getExtras(periodIdx, k);
       var extrasHtml = '';
       if (extras.length > 0) {
         extrasHtml = '<div class="extra-payment-log">';
@@ -707,7 +703,7 @@ function renderSchedule(schedule) {
       // Mark as paid (only on cards with scheduled payments)
       var markHtml = '';
       var isPaid = isMarkedPaid(periodIdx, k);
-      if (isPaidOffNow && !isPaid) {
+      if (isPaidOffNow) {
         // Auto show as paid if balance is zero from extras
         markHtml = '<button class="mark-paid-btn paid" style="pointer-events:none;">&#10003; Paid Off via Extra Payments</button>';
       } else if (scheduled > 0.005) {
