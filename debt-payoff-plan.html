@@ -497,7 +497,8 @@ function getPriorityOrder(bals) {
 function buildSchedule() {
   // Always start from startBal — schedule manages its own running balances
   var bals = {};
-  cardData.forEach(function(c){ bals[c.key] = Math.max(0, c.startBal); });
+  // Use actual dynamic balance as starting point to account for extra payments
+  cardData.forEach(function(c){ bals[c.key] = getDynamicBalance(c.key); });
   var order = getPriorityOrder(bals);
   var periods = [];
   var date = new Date(START_DATE);
