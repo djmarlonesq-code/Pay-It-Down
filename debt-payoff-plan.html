@@ -656,7 +656,8 @@ function renderSchedule(schedule) {
       // For past/current periods use actual dynamic balance (accounts for extras)
       var dynBalNow = getDynamicBalance(k);
       var bal = (period.idx <= nowPeriodIdx()) ? dynBalNow : (period.balsAfter[k] || 0);
-      if (scheduled < 0.005 && bal < 0.005) return;
+      var hasExtras = getExtras(periodIdx, k).length > 0;
+      if (scheduled < 0.005 && bal < 0.005 && !hasExtras) return;
 
       var isPayoff = bal < 0.005 && scheduled > 0.005;
       var isFocus = scheduled > 0.005;
