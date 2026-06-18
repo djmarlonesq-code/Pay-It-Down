@@ -669,7 +669,7 @@ function renderSchedule(schedule) {
       // For past/current periods use actual dynamic balance (accounts for extras)
       var dynBalNow = getDynamicBalance(k);
       // Use dynamic balance for all past/present periods (always show actual paid amounts)
-      var bal = dynBalNow < (period.balsAfter[k] || 0) ? dynBalNow : (period.balsAfter[k] || 0);
+      var bal = dynBalNow;
       // Check extras for this period only (for display)
       var hasExtrasAnywhere = getExtras(periodIdx, k).length > 0;
       // For future periods, skip cards already paid off via extras
