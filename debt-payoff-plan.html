@@ -691,9 +691,21 @@ function addExtra(periodIdx, cardKey) {
   if (!amt || amt <= 0) { showToast('Enter a valid amount'); return; }
   ensurePayment(periodIdx, cardKey);
   payments[periodIdx][cardKey].extras.push({date: fmtDateShort(new Date()), amount: amt});
+  // Auto-mark scheduled payment as paid if extras bring balance to zero
+  var newBal = getDynamicBalance(cardKey);
+  if (newBal < 0.01 && !payments[periodIdx][cardKey].paid) {
+    payments[periodIdx][cardKey].paid = true;
+    payments[periodIdx][cardKey].paidDate = fmtDateShort(new Date());
+    if (!payments[periodIdx][cardKey].scheduledAmt) {
+      var card = cardData.find(function(c){return c.key===cardKey;});
+      payments[periodIdx][cardKey].scheduledAmt = card ? card.minPay : 0;
+    }
+    showToast(fmtMoney(amt)+' extra logged — card PAID OFF! ');
+  } else {
+    showToast(fmtMoney(amt)+' extra logged!');
+  }
   saveState();
   fullRender();
-  showToast(fmtMoney(amt)+' extra logged!');
 }
 
 function editExtra(periodIdx, cardKey, ei) {
