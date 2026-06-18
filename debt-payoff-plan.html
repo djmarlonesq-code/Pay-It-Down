@@ -797,6 +797,7 @@ function addExtra(periodIdx, cardKey) {
   payments[periodIdx][cardKey].extras.push({date: fmtDateShort(new Date()), amount: amt});
   // Auto-mark scheduled payment as paid if extras bring balance to zero
   var newBal = getDynamicBalance(cardKey);
+  showToast('Debug: bal='+newBal.toFixed(2)+' pid='+periodIdx+' key='+cardKey);
   if (newBal < 0.01 && !payments[periodIdx][cardKey].paid) {
     payments[periodIdx][cardKey].paid = true;
     payments[periodIdx][cardKey].paidDate = fmtDateShort(new Date());
