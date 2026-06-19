@@ -670,14 +670,27 @@ function renderSchedule(schedule) {
       var c = cardMap[k]; if (!c) return;
       var scheduled = period.scheduledPayments[k] || 0;
       var int = period.interest[k] || 0;
-      // For past/current periods use actual dynamic balance (accounts for extras)
       var dynBalNow = getDynamicBalance(k);
-      // Use dynamic balance for all past/present periods (always show actual paid amounts)
-      var bal = dynBalNow;
+      var isFuturePeriod = period.idx > nowPeriodIdx();
+      var isProjected = false;
+      var bal;
+      if (isFuturePeriod) {
+        var projBal = dynBalNow;
+        for (var pp = nowPeriodIdx()+1; pp <= period.idx; pp++) {
+          for (var si=0; si<schedule.length; si++) {
+            if (schedule[si].idx === pp) {
+              projBal = Math.max(0, projBal - (schedule[si].scheduledPayments[k]||0));
+              break;
+            }
+          }
+        }
+        bal = projBal;
+        isProjected = true;
+      } else {
+        bal = dynBalNow;
+      }
       // Check extras for this period only (for display)
       var hasExtrasAnywhere = getExtras(periodIdx, k).length > 0;
-      // For future periods, skip cards already paid off via extras
-      var isFuturePeriod = period.idx > nowPeriodIdx();
       if (isFuturePeriod && getDynamicBalance(k) < 0.01) return;
       if (scheduled < 0.005 && bal < 0.005 && !hasExtrasAnywhere) return;
 
