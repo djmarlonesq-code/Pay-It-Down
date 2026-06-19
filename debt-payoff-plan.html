@@ -673,22 +673,8 @@ function renderSchedule(schedule) {
       var dynBalNow = getDynamicBalance(k);
       var isFuturePeriod = period.idx > nowPeriodIdx();
       var isProjected = false;
-      var bal;
-      if (isFuturePeriod) {
-        var projBal = dynBalNow;
-        for (var pp = nowPeriodIdx()+1; pp <= period.idx; pp++) {
-          for (var si=0; si<schedule.length; si++) {
-            if (schedule[si].idx === pp) {
-              projBal = Math.max(0, projBal - (schedule[si].scheduledPayments[k]||0));
-              break;
-            }
-          }
-        }
-        bal = projBal;
-        isProjected = true;
-      } else {
-        bal = dynBalNow;
-      }
+      // Always show the same real current balance for every period until a payment is actually logged
+      var bal = dynBalNow;
       // Check extras for this period only (for display)
       var hasExtrasAnywhere = getExtras(periodIdx, k).length > 0;
       if (isFuturePeriod && getDynamicBalance(k) < 0.01) return;
