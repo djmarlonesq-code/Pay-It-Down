@@ -724,7 +724,7 @@ function renderSchedule(schedule) {
           '<div class="pay-row-stats">'+
             '<div><div class="pay-stat-label">Scheduled</div><div class="pay-stat-val green">'+fmtMoney(scheduled)+'</div></div>'+
             '<div><div class="pay-stat-label">Interest (est)</div><div class="pay-stat-val red">+'+fmtMoney(int)+'</div></div>'+
-            '<div><div class="pay-stat-label">Bal After</div><div class="pay-stat-val muted">'+fmtMoney(bal)+'</div></div>'+
+            '<div><div class="pay-stat-label">Bal After'+(isProjected?' <span style="color:var(--accent3);font-size:8px;">(proj)</span>':'')+'</div><div class="pay-stat-val muted">'+fmtMoney(bal)+'</div></div>'+
             '<div><div class="pay-stat-label">Util After</div><div class="pay-stat-val" style="color:'+uColor+'">'+utilPct.toFixed(1)+'%</div></div>'+
           '</div>'+
           '<div class="payment-actions">'+
