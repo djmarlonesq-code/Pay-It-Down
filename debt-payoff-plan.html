@@ -122,6 +122,7 @@
   .pill{display:inline-block;font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:99px;font-family:'DM Mono',monospace;font-weight:500;}
   .pill.focus{background:rgba(0,229,160,.15);color:var(--accent);}
   .pill.payoff{background:var(--accent);color:#000;}
+.lnk-btn{background:none;border:none;font-family:'DM Mono',monospace;cursor:pointer;padding:2px 6px;border-radius:4px;}
 
   .payment-actions{border-top:1px solid var(--border);padding-top:10px;margin-top:4px;}
   .mark-paid-btn{background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.3);color:var(--accent);border-radius:8px;padding:8px 14px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px;margin-bottom:10px;}
@@ -324,6 +325,9 @@ var payments = {};
 var balanceLocks = {};
 // openPeriods[periodIdx] = bool
 var openPeriods = {};
+// periodLocked[periodIdx] = true means this period is real, finished history —
+// never re-simulate it, regardless of which individual cards have payments logged.
+var periodLocked = {};
 
 // ── PERSIST ────────────────────────────────────────────────────────────────
 var pidLastBackup = null;
@@ -332,7 +336,7 @@ function exportPidBackup(){
   var data=JSON.stringify({
     cardData:cardData,budget:BUDGET,startDate:START_DATE.toISOString(),
     payments:payments,balanceLocks:balanceLocks,openPeriods:openPeriods,
-    sortStrategy:sortStrategy,customOrder:customOrder,
+    sortStrategy:sortStrategy,customOrder:customOrder,periodLocked:periodLocked,
     exportedAt:new Date().toISOString(),version:'pid_v5'
   },null,2);
   var blob=new Blob([data],{type:'application/json'});
@@ -367,6 +371,7 @@ function importPidBackup(file){
       if(s.openPeriods)openPeriods=s.openPeriods;
       if(s.sortStrategy)sortStrategy=s.sortStrategy;
       if(s.customOrder)customOrder=s.customOrder;
+      if(s.periodLocked)periodLocked=s.periodLocked;
       saveState();fullRender();showToast('Backup restored!');
     }catch(e){showToast('Error reading backup file');}
   };
@@ -404,7 +409,8 @@ function saveState() {
       balanceLocks: balanceLocks,
       openPeriods: openPeriods,
       sortStrategy: sortStrategy,
-      customOrder: customOrder
+      customOrder: customOrder,
+      periodLocked: periodLocked
     }));
   } catch(e) {}
 }
@@ -433,6 +439,7 @@ function loadState() {
     if (s.openPeriods) openPeriods = s.openPeriods;
     if (s.sortStrategy) sortStrategy = s.sortStrategy;
     if (s.customOrder) customOrder = s.customOrder;
+    if (s.periodLocked) periodLocked = s.periodLocked;
   } catch(e) {}
   // Default all cards to locked
   cardData.forEach(function(c){ if(!(c.key in balanceLocks)) balanceLocks[c.key] = true; });
@@ -567,11 +574,8 @@ function buildSchedule() {
 
     var scheduledPayments = {};
     var balsAfter = {};
-    var alreadyPaidThisPeriod = false;
-    cardData.forEach(function(c){
-      var p = payments[String(i)] || payments[i];
-      if (p && p[c.key] && p[c.key].paid) alreadyPaidThisPeriod = true;
-    });
+    // Use the explicit lock flag, not a guess based on which cards have data.
+    var alreadyPaidThisPeriod = periodLocked[String(i)] === true;
 
     if (alreadyPaidThisPeriod) {
       // This period already has real logged payments. Use the ACTUAL amounts
@@ -816,12 +820,14 @@ function renderSchedule(schedule) {
       utilBars += '<div class="mini-util-row"><div class="mini-util-name">'+c.name+'</div><div class="mini-util-bar-bg"><div class="mini-util-bar-fill" style="width:'+Math.min(pct,100).toFixed(1)+'%;background:'+uColor+'"></div></div><div class="mini-util-pct" style="color:'+uColor+'">'+pct.toFixed(1)+'%</div></div>';
     });
 
+    var isLocked = periodLocked[String(periodIdx)] === true;
     el.innerHTML =
       '<div class="pc-header">'+
         '<div class="pc-left">'+
           '<div class="pc-num">Pay '+String(periodIdx+1).padStart(2,'0')+'</div>'+
           '<div class="pc-date">'+fmtDate(period.date)+'</div>'+
           '<div class="pc-badges">'+badges+'</div>'+
+          (isLocked?'<button class="lnk-btn" style="color:var(--muted);font-size:10px;" onclick="event.stopPropagation();unlockPeriod('+periodIdx+')">&#128274; history</button>':'')+
         '</div>'+
         '<div class="pc-right"><div class="pc-total">'+fmtMoney(BUDGET)+'</div><div class="chevron">&#9662;</div></div>'+
       '</div>'+
@@ -865,6 +871,8 @@ function toggleMarkPaid(periodIdx, cardKey, scheduledAmt) {
   var wasP = payments[periodIdx][cardKey].paid;
   payments[String(periodIdx)][cardKey].paid = !wasP;
   if (!wasP) payments[String(periodIdx)][cardKey].scheduledAmt = scheduledAmt;
+  // Logging a real payment locks this period as finished history
+  periodLocked[String(periodIdx)] = true;
   saveState();
   fullRender();
   showToast(!wasP ? 'Payment logged!' : 'Payment removed');
@@ -876,6 +884,8 @@ function addExtra(periodIdx, cardKey) {
   if (!amt || amt <= 0) { showToast('Enter a valid amount'); return; }
   ensurePayment(periodIdx, cardKey);
   payments[String(periodIdx)][cardKey].extras.push({date: fmtDateShort(new Date()), amount: amt});
+  // Logging a real extra payment locks this period as finished history
+  periodLocked[String(periodIdx)] = true;
   // Auto-mark scheduled payment as paid if extras bring balance to zero
   var newBal = getDynamicBalance(cardKey);
   if (newBal < 0.01 && !payments[periodIdx][cardKey].paid) {
@@ -1022,6 +1032,14 @@ function addCard(){
   renderEditor();
   fullRender();
   showToast(name+' added!');
+}
+
+function unlockPeriod(periodIdx){
+  if (!confirm('Unlock this period? It will be re-simulated using your current strategy instead of keeping the logged history as-is.')) return;
+  delete periodLocked[String(periodIdx)];
+  saveState();
+  fullRender();
+  showToast('Period unlocked — will re-simulate');
 }
 
 function removeCard(key){
