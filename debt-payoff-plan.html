@@ -550,7 +550,10 @@ function buildSchedule() {
   // Always start from startBal — schedule manages its own running balances
   var bals = {};
   cardData.forEach(function(c){ bals[c.key] = Math.max(0, c.startBal); });
-  var order = getPriorityOrder(bals);
+  // Use actual current dynamic balances for priority ordering decisions
+  var dynBalsForOrder = {};
+  cardData.forEach(function(c){ dynBalsForOrder[c.key] = getDynamicBalance(c.key); });
+  var order = getPriorityOrder(dynBalsForOrder);
   var periods = [];
   var date = new Date(START_DATE);
 
@@ -981,6 +984,7 @@ function renderEditor() {
 // ── ADD / REMOVE CARD ──────────────────────────────────────────────────────
 function addCard(){
   var name = document.getElementById('newCardName').value.trim();
+  name = name.replace(/\w\S*/g, function(word){return word.charAt(0).toUpperCase()+word.slice(1).toLowerCase();});
   var bal = parseFloat(document.getElementById('newCardBal').value)||0;
   var limit = parseFloat(document.getElementById('newCardLimit').value)||0;
   var apr = parseFloat(document.getElementById('newCardApr').value)||0;
