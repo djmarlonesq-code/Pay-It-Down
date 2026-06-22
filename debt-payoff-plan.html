@@ -567,28 +567,47 @@ function buildSchedule() {
       periodInterest[c.key] = bals[c.key]>0 ? interest14(bals[c.key], c.apr) : 0;
     });
 
-    // Waterfall: full BUDGET across cards in priority order
     var scheduledPayments = {};
-    cardData.forEach(function(c){scheduledPayments[c.key]=0;});
-    var tempBals = Object.assign({}, bals);
-    var remaining = BUDGET;
-    for (var oi=0; oi<order.length; oi++) {
-      var ok = order[oi];
-      if (remaining < 0.005) break;
-      if (tempBals[ok] < 0.005) continue;
-      var canPay = +Math.min(remaining, tempBals[ok]).toFixed(2);
-      if (canPay > 0.005) {
-        scheduledPayments[ok] = +(scheduledPayments[ok]+canPay).toFixed(2);
-        remaining = +(remaining-canPay).toFixed(2);
-        tempBals[ok] = +Math.max(0, tempBals[ok]-canPay).toFixed(2);
-      }
-    }
-
-    // balsAfter = balance minus scheduled payment for this period
     var balsAfter = {};
+    var alreadyPaidThisPeriod = false;
     cardData.forEach(function(c){
-      balsAfter[c.key] = +Math.max(0, bals[c.key] - (scheduledPayments[c.key]||0)).toFixed(2);
+      var p = payments[String(i)] || payments[i];
+      if (p && p[c.key] && p[c.key].paid) alreadyPaidThisPeriod = true;
     });
+
+    if (alreadyPaidThisPeriod) {
+      // This period already has real logged payments. Use the ACTUAL amounts
+      // paid instead of re-simulating, so future periods build on real history.
+      cardData.forEach(function(c){
+        var p = payments[String(i)] || payments[i];
+        var realPaid = 0;
+        if (p && p[c.key]) {
+          if (p[c.key].paid && p[c.key].scheduledAmt) realPaid += Number(p[c.key].scheduledAmt);
+          if (p[c.key].extras) p[c.key].extras.forEach(function(e){ realPaid += Number(e.amount); });
+        }
+        scheduledPayments[c.key] = realPaid;
+        balsAfter[c.key] = +Math.max(0, bals[c.key] - realPaid).toFixed(2);
+      });
+    } else {
+      // No real payment logged for this period yet — simulate using current strategy.
+      cardData.forEach(function(c){scheduledPayments[c.key]=0;});
+      var tempBals = Object.assign({}, bals);
+      var remaining = BUDGET;
+      for (var oi=0; oi<order.length; oi++) {
+        var ok = order[oi];
+        if (remaining < 0.005) break;
+        if (tempBals[ok] < 0.005) continue;
+        var canPay = +Math.min(remaining, tempBals[ok]).toFixed(2);
+        if (canPay > 0.005) {
+          scheduledPayments[ok] = +(scheduledPayments[ok]+canPay).toFixed(2);
+          remaining = +(remaining-canPay).toFixed(2);
+          tempBals[ok] = +Math.max(0, tempBals[ok]-canPay).toFixed(2);
+        }
+      }
+      cardData.forEach(function(c){
+        balsAfter[c.key] = +Math.max(0, bals[c.key] - (scheduledPayments[c.key]||0)).toFixed(2);
+      });
+    }
 
     periods.push({
       idx: i,
