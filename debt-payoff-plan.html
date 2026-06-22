@@ -178,7 +178,7 @@
 <header>
   <div class="tag">Debt Payoff Plan</div>
   <h1>Pay It <span>Down.</span></h1>
-  <div class="subtitle">Avalanche strategy &middot; Bi-weekly &middot; Starting 06/05/2026</div>
+  <div class="subtitle" id="strategySubtitle">Bi-weekly &middot; Starting 06/19/2026</div>
 </header>
 
 <!-- DEBT PROGRESS -->
@@ -258,7 +258,7 @@
           </div>
           <div class="budget-field">
             <div class="field-label">First Paycheck Date</div>
-            <input class="field-input wide" id="inputStartDate" type="date" value="2026-06-05">
+            <input class="field-input wide" id="inputStartDate" type="date" value="2026-06-19">
           </div>
         </div>
         <div class="budget-field" style="margin-bottom:16px;">
@@ -283,6 +283,7 @@
         </div>
         <button class="apply-btn" id="applyBtn">&#8635; Recalculate Plan</button>
         <button class="apply-btn" id="resetBtn" style="margin-top:10px;background:rgba(255,107,107,0.15);color:var(--accent2);border:1px solid rgba(255,107,107,0.3);">&#128465; Reset Payment History</button>
+        <button class="apply-btn" id="freshStartBtn" style="margin-top:10px;background:rgba(123,140,255,0.15);color:#7b8cff;border:1px solid rgba(123,140,255,0.3);">&#10227; Fresh Start (Today as Pay 01)</button>
         <div class="backup-bar-pid" id="pidBackupBar" style="margin-top:12px;">
           <div class="backup-status-pid" id="pidBackupStatus">Never backed up</div>
           <div class="backup-btns-pid">
@@ -314,7 +315,7 @@ var cardData = [
 ];
 
 var BUDGET = 650;
-var START_DATE = new Date('2026-06-05T00:00:00');
+var START_DATE = new Date('2026-06-19T00:00:00');
 var DAYS = 14;
 var sortStrategy = 'avalanche'; // 'avalanche' | 'snowball' | 'highbal' | 'custom'
 var customOrder = []; // array of card keys in custom priority order
@@ -1066,6 +1067,9 @@ function fullRender() {
   renderUtilBars();
   renderSchedule(schedule);
   renderEditor();
+  var stratNames = {avalanche:'Avalanche', snowball:'Snowball', highbal:'Highest Balance', custom:'Custom'};
+  var subEl = document.getElementById('strategySubtitle');
+  if (subEl) subEl.textContent = (stratNames[sortStrategy]||'Avalanche')+' strategy \u00b7 Bi-weekly \u00b7 Starting '+START_DATE.toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'numeric'});
 }
 
 // ── COLLAPSIBLE ────────────────────────────────────────────────────────────
@@ -1126,6 +1130,18 @@ document.getElementById('resetBtn').addEventListener('click', function() {
   saveState();
   fullRender();
   showToast('Payment history cleared');
+});
+
+document.getElementById('freshStartBtn').addEventListener('click', function() {
+  if (!confirm('Start fresh from today? This clears all payment history and sets today as Pay 01. Your current card balances and strategy stay the same.')) return;
+  payments = {};
+  openPeriods = {};
+  periodLocked = {};
+  var today = new Date();
+  START_DATE = new Date(today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0')+'T00:00:00');
+  saveState();
+  fullRender();
+  showToast('Fresh start set — today is Pay 01!');
 });
 
 // ── INIT ───────────────────────────────────────────────────────────────────
