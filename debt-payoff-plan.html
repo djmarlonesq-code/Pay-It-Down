@@ -736,7 +736,7 @@ function renderSchedule(schedule) {
       if (scheduled < 0.005 && bal < 0.005 && !hasExtrasAnywhere) return;
 
       var isPayoff = bal < 0.005 && scheduled > 0.005;
-      var isFocus = scheduled > 0.005;
+      var isFocus = k === period.focusKey;
       var isPaidOffNow = bal < 0.01;
       var pill = (isPayoff||isPaidOffNow) ? '<span class="pill payoff">PAID OFF</span>' : isFocus ? '<span class="pill focus">FOCUS</span>' : '';
       var utilPct = c.limit>0&&bal>0 ? (bal/c.limit*100) : 0;
