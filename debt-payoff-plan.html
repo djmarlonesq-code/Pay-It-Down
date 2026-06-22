@@ -354,11 +354,10 @@ function importPidBackup(file){
     try{
       var s=JSON.parse(ev.target.result);
       if(!s.payments&&!s.cardData){showToast('Invalid backup file');return;}
-      if(s.cardData&&s.cardData.length===cardData.length){
-        s.cardData.forEach(function(saved,i){
-          if(typeof saved.startBal==='number')cardData[i].startBal=saved.startBal;
-          if(typeof saved.limit==='number')cardData[i].limit=saved.limit;
-          if(typeof saved.apr==='number')cardData[i].apr=saved.apr;
+      if(s.cardData && s.cardData.length){
+        // Fully replace cardData with the backup's version (handles added/removed cards)
+        cardData = s.cardData.map(function(c){
+          return {key:c.key, name:c.name, apr:c.apr, limit:c.limit, startBal:c.startBal};
         });
       }
       if(typeof s.budget==='number')BUDGET=s.budget;
@@ -415,11 +414,10 @@ function loadState() {
     var raw = localStorage.getItem('pid_v5');
     if (!raw) return;
     var s = JSON.parse(raw);
-    if (s.cardData && s.cardData.length === cardData.length) {
-      s.cardData.forEach(function(saved, i) {
-        if (typeof saved.startBal === 'number') cardData[i].startBal = saved.startBal;
-        if (typeof saved.limit === 'number') cardData[i].limit = saved.limit;
-        if (typeof saved.apr === 'number') cardData[i].apr = saved.apr;
+    if (s.cardData && s.cardData.length) {
+      // Fully replace cardData with the saved version (handles added/removed cards)
+      cardData = s.cardData.map(function(c){
+        return {key:c.key, name:c.name, apr:c.apr, limit:c.limit, startBal:c.startBal};
       });
     }
     if (typeof s.budget === 'number') BUDGET = s.budget;
@@ -935,6 +933,12 @@ function toggleLock(i) {
   } else {
     var newBal = inp ? (parseFloat(inp.value) || 0) : c.startBal;
     cardData[i].startBal = newBal;
+    // Clear this card's payment history - the new balance already reflects
+    // everything that's happened up to now, so old payments shouldn't be
+    // subtracted again on top of the fresh number.
+    Object.keys(payments).forEach(function(pid){
+      if (payments[pid][c.key]) delete payments[pid][c.key];
+    });
     balanceLocks[c.key] = true;
     if (field) field.classList.add('locked');
     if (btn) { btn.innerHTML = '&#128274;'; btn.classList.remove('unlocked'); }
