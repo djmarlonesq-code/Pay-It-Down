@@ -274,7 +274,7 @@
           <div class="field-label" style="margin-bottom:8px;">Add a Card</div>
           <div class="card-edit-fields" style="margin-bottom:10px;">
             <div class="card-edit-field"><label>Card Name</label><input type="text" id="newCardName" placeholder="e.g. Chase Sapphire" onblur="titleCase(this)"></div>
-            <div class="card-edit-field"><label>Balance ($)</label><input type="number" step="0.01" id="newCardBal" placeholder="0.00"></div>
+            <div class="card-edit-field"><label>Current Balance ($)</label><input type="number" step="0.01" id="newCardBal" placeholder="0.00"></div>
             <div class="card-edit-field"><label>Limit ($)</label><input type="number" step="1" id="newCardLimit" placeholder="0"></div>
             <div class="card-edit-field"><label>APR (%)</label><input type="number" step="0.01" id="newCardApr" placeholder="0.00"></div>
           </div>
@@ -297,7 +297,7 @@
 <div class="note">
   * Interest accrues daily based on APR automatically.<br>
   * $<span id="notebudget">650</span> goes entirely to the focus card each paycheck via waterfall. Minimums are handled separately.<br>
-  * Starting balance is locked by default. Tap &#128274; to unlock and edit if your balance changes.<br>
+  * Current balance is locked by default. Tap &#128274; to unlock and edit if your balance changes.<br>
   * All payments are logged and the entire plan recalculates dynamically.
 </div>
 </div>
@@ -950,7 +950,7 @@ function renderEditor() {
       '</div>'+
       '<div class="card-edit-fields">'+
         '<div class="card-edit-field'+(locked?' locked':'')+'" id="balField_'+i+'">'+
-          '<label>Starting Balance ($) '+
+          '<label>Current Balance ($) '+
             '<button class="lock-btn'+(locked?'':' unlocked')+'" id="lockBtn_'+i+'" onclick="toggleLock('+i+')">'+(locked?'&#128274;':'&#128275;')+'</button>'+
           '</label>'+
           '<input type="number" step="0.01" min="0" value="'+c.startBal.toFixed(2)+'" data-i="'+i+'" data-field="startBal"'+(locked?' readonly':'')+'>'+
