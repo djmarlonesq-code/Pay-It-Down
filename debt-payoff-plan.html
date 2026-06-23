@@ -229,6 +229,18 @@
   </div>
 </div>
 
+<!-- EXTRA PAYMENTS HISTORY -->
+<div class="collapsible-section">
+  <div class="col-header collapsed" data-target="secExtraHistory">
+    <span class="col-header-label">Extra Payments History</span>
+    <div class="col-line"></div>
+    <span class="col-chevron">&#9662;</span>
+  </div>
+  <div class="col-body hidden" id="secExtraHistory">
+    <div id="extraHistoryList" style="display:flex;flex-direction:column;gap:10px;"></div>
+  </div>
+</div>
+
 <!-- CARD DATA -->
 <div class="collapsible-section">
   <div class="col-header collapsed" data-target="secCardData">
@@ -292,6 +304,7 @@
             <label class="backup-btn-pid import" style="cursor:pointer;">&#8593; Import<input type="file" id="pidImportFile" accept=".json" style="display:none;"></label>
           </div>
         </div>
+        <button class="apply-btn" id="exportPdfBtn" style="margin-top:10px;background:rgba(255,209,102,0.15);color:var(--accent3);border:1px solid rgba(255,209,102,0.3);">&#128196; Export to PDF</button>
       </div>
     </div>
   </div>
@@ -330,6 +343,10 @@ var openPeriods = {};
 // periodLocked[periodIdx] = true means this period is real, finished history —
 // never re-simulate it, regardless of which individual cards have payments logged.
 var periodLocked = {};
+// cardTimeline[key] = {name, addedDate, removedDate}
+var cardTimeline = {};
+// orphanedHistory[cardKeyOrName] = {name, extras:[{date,amount,periodIdx}], addedDate, removedDate}
+var orphanedHistory = {};
 
 // ── PERSIST ────────────────────────────────────────────────────────────────
 var pidLastBackup = null;
@@ -339,6 +356,7 @@ function exportPidBackup(){
     cardData:cardData,budget:BUDGET,startDate:START_DATE.toISOString(),
     payments:payments,balanceLocks:balanceLocks,openPeriods:openPeriods,
     sortStrategy:sortStrategy,customOrder:customOrder,periodLocked:periodLocked,
+    cardTimeline:cardTimeline,orphanedHistory:orphanedHistory,
     exportedAt:new Date().toISOString(),version:'pid_v5'
   },null,2);
   var blob=new Blob([data],{type:'application/json'});
@@ -374,6 +392,8 @@ function importPidBackup(file){
       if(s.sortStrategy)sortStrategy=s.sortStrategy;
       if(s.customOrder)customOrder=s.customOrder;
       if(s.periodLocked)periodLocked=s.periodLocked;
+      if(s.cardTimeline)cardTimeline=s.cardTimeline;
+      if(s.orphanedHistory)orphanedHistory=s.orphanedHistory;
       saveState();fullRender();showToast('Backup restored!');
     }catch(e){showToast('Error reading backup file');}
   };
@@ -412,7 +432,9 @@ function saveState() {
       openPeriods: openPeriods,
       sortStrategy: sortStrategy,
       customOrder: customOrder,
-      periodLocked: periodLocked
+      periodLocked: periodLocked,
+      cardTimeline: cardTimeline,
+      orphanedHistory: orphanedHistory
     }));
   } catch(e) {}
 }
@@ -442,9 +464,15 @@ function loadState() {
     if (s.sortStrategy) sortStrategy = s.sortStrategy;
     if (s.customOrder) customOrder = s.customOrder;
     if (s.periodLocked) periodLocked = s.periodLocked;
+    if (s.cardTimeline) cardTimeline = s.cardTimeline;
+    if (s.orphanedHistory) orphanedHistory = s.orphanedHistory;
   } catch(e) {}
   // Default all cards to locked
   cardData.forEach(function(c){ if(!(c.key in balanceLocks)) balanceLocks[c.key] = true; });
+  // Ensure every card has a timeline entry (covers default/pre-existing cards)
+  cardData.forEach(function(c){
+    if (!cardTimeline[c.key]) cardTimeline[c.key] = {name:c.name, addedDate:new Date().toISOString(), removedDate:null};
+  });
 }
 
 // ── HELPERS ────────────────────────────────────────────────────────────────
@@ -773,20 +801,16 @@ function renderSchedule(schedule) {
       var utilPct = c.limit>0&&bal>0 ? (bal/c.limit*100) : 0;
       var uColor = utilColor(utilPct);
 
-      // Extras - only show for this specific period
+      // Compact total extras link - full list now lives in Extra Payments History section
       var extras = getExtras(periodIdx, k);
       var extrasHtml = '';
       if (extras.length > 0) {
-        extrasHtml = '<div class="extra-payment-log">';
-        extras.forEach(function(e, ei) {
-          extrasHtml +=
-            '<div class="extra-entry" id="xEntry_'+periodIdx+'_'+k+'_'+ei+'">'+
-              '<span class="extra-entry-date">'+e.date+'</span>'+
-              '<span class="extra-entry-amt">+'+fmtMoney(e.amount)+' extra</span>'+
-              '<button class="extra-entry-edit" onclick="editExtra('+periodIdx+',\''+k+'\','+ei+')">edit</button>'+
-            '</div>';
-        });
-        extrasHtml += '</div>';
+        var extrasTotal = extras.reduce(function(s,e){return s+e.amount;},0);
+        extrasHtml =
+          '<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 10px;margin-bottom:8px;cursor:pointer;" onclick="jumpToExtraHistory(\''+k+'\')">'+
+            '<span style="font-family:monospace;font-size:12px;color:var(--accent3);">'+extras.length+' extra'+(extras.length!==1?'s':'')+' this period &middot; '+fmtMoney(extrasTotal)+'</span>'+
+            '<span style="font-family:monospace;font-size:10px;color:var(--muted);">view &rarr;</span>'+
+          '</div>';
       }
 
       // Mark as paid (only on cards with scheduled payments)
@@ -912,6 +936,24 @@ function addExtra(periodIdx, cardKey) {
   }
   saveState();
   fullRender();
+}
+
+function jumpToExtraHistory(cardKey){
+  var sec = document.getElementById('secExtraHistory');
+  var hdr = document.querySelector('[data-target="secExtraHistory"]');
+  if (sec && sec.classList.contains('hidden')) {
+    sec.classList.remove('hidden');
+    if (hdr) hdr.classList.remove('collapsed');
+  }
+  setTimeout(function(){
+    var body = document.getElementById('ehBody_'+cardKey);
+    if (body) {
+      body.style.display = 'block';
+      var chev = document.getElementById('ehChev_'+cardKey);
+      if (chev) chev.style.transform = 'rotate(180deg)';
+      body.scrollIntoView({behavior:'smooth', block:'center'});
+    }
+  }, 100);
 }
 
 function editExtra(periodIdx, cardKey, ei) {
@@ -1093,7 +1135,26 @@ function addCard(){
   var apr = parseFloat(document.getElementById('newCardApr').value)||0;
   if (!name) { showToast('Enter a card name'); return; }
   if (!limit) { showToast('Enter a credit limit'); return; }
-  var key = 'card_'+Date.now();
+
+  // Check for matching orphaned history by name
+  var matchKey = Object.keys(orphanedHistory).find(function(k){return orphanedHistory[k].name===name;});
+  var key;
+  if (matchKey) {
+    var continueHistory = confirm('Found previous history for "'+name+'". Continue with that history? (Cancel = start fresh)');
+    if (continueHistory) {
+      key = matchKey;
+      cardTimeline[key] = cardTimeline[key] || {name:name, addedDate: orphanedHistory[key].addedDate};
+      cardTimeline[key].removedDate = null;
+      delete orphanedHistory[key];
+    } else {
+      key = 'card_'+Date.now();
+      cardTimeline[key] = {name:name, addedDate: new Date().toISOString(), removedDate: null};
+    }
+  } else {
+    key = 'card_'+Date.now();
+    cardTimeline[key] = {name:name, addedDate: new Date().toISOString(), removedDate: null};
+  }
+
   cardData.push({key:key, name:name, apr:apr, limit:limit, startBal:bal});
   balanceLocks[key] = true;
   document.getElementById('newCardName').value='';
@@ -1106,6 +1167,79 @@ function addCard(){
   showToast(name+' added!');
 }
 
+function exportPidPdf(){
+  var title = 'Pay It Down — Card Data &amp; Payment History';
+
+  // Card data + current balances
+  var cardRows = cardData.map(function(c){
+    var dynBal = getDynamicBalance(c.key);
+    var util = c.limit>0 ? (dynBal/c.limit*100) : 0;
+    return '<tr><td>'+c.name+'</td><td style="text-align:right">'+c.apr+'%</td><td style="text-align:right">'+fmtMoney(c.limit)+'</td><td style="text-align:right;color:#e53935">'+fmtMoney(dynBal)+'</td><td style="text-align:right">'+util.toFixed(1)+'%</td></tr>';
+  }).join('');
+
+  // Extra payments history (all cards, active + orphaned)
+  var extraSections = '';
+  cardData.forEach(function(c){
+    var extras = getAllExtrasForCard(c.key);
+    if (!extras.length) return;
+    var total = extras.reduce(function(s,e){return s+e.amount;},0);
+    var rows = extras.map(function(e){
+      return '<tr><td>'+e.date+'</td><td style="text-align:right;color:#00a86b">'+fmtMoney(e.amount)+'</td><td style="text-align:right">Pay '+String(e.periodIdx+1).padStart(2,'0')+'</td></tr>';
+    }).join('');
+    extraSections += '<h3>'+c.name+' — '+extras.length+' extra'+(extras.length!==1?'s':'')+', '+fmtMoney(total)+' total</h3>'+
+      '<table><tr><th>Date</th><th style="text-align:right">Amount</th><th style="text-align:right">Pay Period</th></tr>'+rows+'</table>';
+  });
+  Object.keys(orphanedHistory).forEach(function(key){
+    var oh = orphanedHistory[key];
+    if (!oh.extras.length) return;
+    var total = oh.extras.reduce(function(s,e){return s+e.amount;},0);
+    var rows = oh.extras.map(function(e){
+      return '<tr><td>'+e.date+'</td><td style="text-align:right;color:#00a86b">'+fmtMoney(e.amount)+'</td><td style="text-align:right">Pay '+String(e.periodIdx+1).padStart(2,'0')+'</td></tr>';
+    }).join('');
+    extraSections += '<h3>'+oh.name+' (removed card) — '+oh.extras.length+' extra'+(oh.extras.length!==1?'s':'')+', '+fmtMoney(total)+' total</h3>'+
+      '<table><tr><th>Date</th><th style="text-align:right">Amount</th><th style="text-align:right">Pay Period</th></tr>'+rows+'</table>';
+  });
+
+  // Card History Log - timeline + payment counts/totals
+  var allKeys = Object.keys(cardTimeline).concat(Object.keys(orphanedHistory).filter(function(k){return !cardTimeline[k];}));
+  var timelineRows = allKeys.map(function(key){
+    var tl = cardTimeline[key] || orphanedHistory[key];
+    var name = tl.name;
+    var added = tl.addedDate ? new Date(tl.addedDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+    var removed = tl.removedDate ? new Date(tl.removedDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Active';
+    var extras = orphanedHistory[key] ? orphanedHistory[key].extras : getAllExtrasForCard(key);
+    var count = extras.length;
+    var total = extras.reduce(function(s,e){return s+e.amount;},0);
+    return '<tr><td>'+name+'</td><td>'+added+'</td><td>'+removed+'</td><td style="text-align:right">'+count+'</td><td style="text-align:right">'+fmtMoney(total)+'</td></tr>';
+  }).join('');
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+title+'</title>'+
+    '<style>'+
+      'body{font-family:Arial,sans-serif;color:#1a1a2e;padding:24px;font-size:12px;}'+
+      'h1{font-size:20px;margin-bottom:4px;}'+
+      'h2{font-size:14px;margin:20px 0 8px;border-bottom:2px solid #00c48c;padding-bottom:4px;}'+
+      'h3{font-size:12px;margin:14px 0 6px;color:#444;}'+
+      'p{color:#666;font-size:11px;margin-bottom:16px;}'+
+      'table{width:100%;border-collapse:collapse;margin-bottom:12px;}'+
+      'th{background:#f0f0f0;padding:6px 8px;text-align:left;font-size:10px;}'+
+      'td{padding:5px 8px;border-bottom:1px solid #eee;font-size:11px;}'+
+    '</style></head><body>'+
+    '<h1>Pay It Down — Full Export</h1>'+
+    '<p>Generated '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})+'</p>'+
+    '<h2>Card Data</h2>'+
+    '<table><tr><th>Card</th><th style="text-align:right">APR</th><th style="text-align:right">Limit</th><th style="text-align:right">Balance</th><th style="text-align:right">Util</th></tr>'+cardRows+'</table>'+
+    '<h2>Extra Payments History</h2>'+
+    (extraSections || '<p>No extra payments logged yet.</p>')+
+    '<h2>Card History Log</h2>'+
+    '<table><tr><th>Card</th><th>Added</th><th>Removed</th><th style="text-align:right">Payments</th><th style="text-align:right">Total Paid</th></tr>'+timelineRows+'</table>'+
+    '</body></html>';
+
+  var win = window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+  setTimeout(function(){win.print();},500);
+}
+
 function unlockPeriod(periodIdx){
   if (!confirm('Unlock this period? It will be re-simulated using your current strategy instead of keeping the logged history as-is.')) return;
   delete periodLocked[String(periodIdx)];
@@ -1115,7 +1249,34 @@ function unlockPeriod(periodIdx){
 }
 
 function removeCard(key){
-  if (!confirm('Remove this card? Its payment history will be lost.')) return;
+  var card = cardData.find(function(c){return c.key===key;});
+  if (!card) return;
+  if (!confirm('Remove '+card.name+'?')) return;
+  var keepHistory = confirm('Keep extra payment history for '+card.name+'? (OK = keep, Cancel = delete history too)');
+
+  // Collect all extras for this card across all periods for the history record
+  var allExtras = [];
+  Object.keys(payments).forEach(function(pid){
+    if (payments[pid][key] && payments[pid][key].extras) {
+      payments[pid][key].extras.forEach(function(e){
+        allExtras.push({date:e.date, amount:e.amount, periodIdx:parseInt(pid)});
+      });
+    }
+  });
+
+  if (keepHistory) {
+    cardTimeline[key] = cardTimeline[key] || {name:card.name, addedDate:new Date().toISOString()};
+    cardTimeline[key].removedDate = new Date().toISOString();
+    orphanedHistory[key] = {
+      name: card.name,
+      extras: allExtras,
+      addedDate: cardTimeline[key].addedDate,
+      removedDate: cardTimeline[key].removedDate
+    };
+  } else {
+    delete cardTimeline[key];
+  }
+
   cardData = cardData.filter(function(c){return c.key!==key;});
   delete balanceLocks[key];
   Object.keys(payments).forEach(function(pid){
@@ -1125,10 +1286,103 @@ function removeCard(key){
   saveState();
   renderEditor();
   fullRender();
-  showToast('Card removed');
+  showToast(keepHistory ? 'Card removed, history kept' : 'Card and history removed');
 }
 
 // ── FULL RENDER ────────────────────────────────────────────────────────────
+function getAllExtrasForCard(key){
+  var list = [];
+  Object.keys(payments).forEach(function(pid){
+    if (payments[pid][key] && payments[pid][key].extras) {
+      payments[pid][key].extras.forEach(function(e, ei){
+        list.push({date:e.date, amount:e.amount, periodIdx:parseInt(pid), extraIdx:ei});
+      });
+    }
+  });
+  list.sort(function(a,b){ return a.periodIdx-b.periodIdx; });
+  return list;
+}
+
+function renderExtraHistory(){
+  var container = document.getElementById('extraHistoryList');
+  if (!container) return;
+  container.innerHTML = '';
+
+  cardData.forEach(function(c){
+    var extras = getAllExtrasForCard(c.key);
+    var total = extras.reduce(function(s,e){return s+e.amount;},0);
+
+    var box = document.createElement('div');
+    box.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;';
+
+    var header = document.createElement('div');
+    header.style.cssText = 'padding:12px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;';
+    header.innerHTML =
+      '<div><div style="font-weight:700;font-size:13px;">'+c.name+'</div>'+
+      '<div style="font-family:monospace;font-size:11px;color:var(--muted);margin-top:2px;">'+extras.length+' extra'+(extras.length!==1?'s':'')+' &middot; '+fmtMoney(total)+' total</div></div>'+
+      '<span style="color:var(--muted);font-size:12px;" id="ehChev_'+c.key+'">&#9662;</span>';
+
+    var body = document.createElement('div');
+    body.id = 'ehBody_'+c.key;
+    body.style.cssText = 'display:none;padding:0 14px 14px;border-top:1px solid var(--border);';
+
+    if (!extras.length) {
+      body.innerHTML = '<div style="color:var(--muted);font-size:12px;padding-top:10px;">No extra payments logged yet.</div>';
+    } else {
+      var list = document.createElement('div');
+      list.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-top:10px;';
+      extras.forEach(function(e){
+        var row = document.createElement('div');
+        row.id = 'ehEntry_'+c.key+'_'+e.periodIdx+'_'+e.extraIdx;
+        row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border-radius:8px;padding:8px 10px;font-family:monospace;font-size:12px;';
+        row.innerHTML =
+          '<span style="color:var(--muted);">'+e.date+'</span>'+
+          '<span style="color:var(--accent3);font-weight:600;flex:1;text-align:center;">'+fmtMoney(e.amount)+'</span>'+
+          '<span style="color:var(--muted);font-size:10px;">Pay '+String(e.periodIdx+1).padStart(2,'0')+'</span>'+
+          '<button class="lnk-btn" style="color:var(--accent3);margin-left:8px;" onclick="editHistoryExtra(\''+c.key+'\','+e.periodIdx+','+e.extraIdx+')">edit</button>'+
+          '<button class="lnk-btn" style="color:var(--accent2);" onclick="deleteExtra('+e.periodIdx+',\''+c.key+'\','+e.extraIdx+');renderExtraHistory();">del</button>';
+        list.appendChild(row);
+      });
+      body.appendChild(list);
+    }
+
+    header.onclick = function(){
+      var open = body.style.display === 'block';
+      body.style.display = open ? 'none' : 'block';
+      var chev = document.getElementById('ehChev_'+c.key);
+      if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
+    };
+
+    box.appendChild(header);
+    box.appendChild(body);
+    container.appendChild(box);
+  });
+
+  if (!cardData.length) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:12px;">No cards yet.</div>';
+  }
+}
+
+function editHistoryExtra(cardKey, periodIdx, extraIdx){
+  var el = document.getElementById('ehEntry_'+cardKey+'_'+periodIdx+'_'+extraIdx);
+  if (!el) return;
+  var cur = payments[String(periodIdx)][cardKey].extras[extraIdx];
+  el.innerHTML =
+    '<span style="color:var(--muted);">'+cur.date+'</span>'+
+    '<input type="number" step="0.01" value="'+cur.amount.toFixed(2)+'" id="ehEdit_'+cardKey+'_'+periodIdx+'_'+extraIdx+'" style="width:90px;background:var(--bg);border:1px solid var(--accent);border-radius:6px;padding:4px 8px;color:var(--text);font-family:monospace;font-size:12px;">'+
+    '<button class="lnk-btn" style="color:var(--accent);" onclick="saveHistoryExtra(\''+cardKey+'\','+periodIdx+','+extraIdx+')">save</button>';
+}
+
+function saveHistoryExtra(cardKey, periodIdx, extraIdx){
+  var inp = document.getElementById('ehEdit_'+cardKey+'_'+periodIdx+'_'+extraIdx);
+  var amt = parseFloat(inp.value);
+  if (!amt || amt < 0) { showToast('Enter a valid amount'); return; }
+  payments[String(periodIdx)][cardKey].extras[extraIdx].amount = amt;
+  saveState();
+  fullRender();
+  showToast('Updated!');
+}
+
 function fullRender() {
   var schedule = buildSchedule();
   renderDebtProgress();
@@ -1137,6 +1391,7 @@ function fullRender() {
   renderSchedule(schedule);
   renderEditor();
   renderCustomOrderEditor();
+  renderExtraHistory();
   var stratNames = {avalanche:'Avalanche', snowball:'Snowball', highbal:'Highest Balance', custom:'Custom'};
   var subEl = document.getElementById('strategySubtitle');
   if (subEl) subEl.textContent = (stratNames[sortStrategy]||'Avalanche')+' strategy \u00b7 Bi-weekly \u00b7 Starting '+START_DATE.toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'numeric'});
@@ -1179,6 +1434,7 @@ document.getElementById('applyBtn').addEventListener('click', function() {
 // ── RESET PAYMENTS ────────────────────────────────────────────────────────
 document.addEventListener('click',function(ev){
   if(ev.target&&ev.target.id==='pidExportBtn')exportPidBackup();
+  if(ev.target&&ev.target.id==='exportPdfBtn')exportPidPdf();
 });
 document.addEventListener('change',function(ev){
   if(ev.target&&ev.target.id==='pidImportFile'){importPidBackup(ev.target.files[0]);ev.target.value='';}
@@ -1222,6 +1478,47 @@ try {
   });
 } catch(e) {}
 loadState();
+
+// One-time historical recovery from earlier backups (runs once, then never again)
+try {
+  if (!localStorage.getItem('pid_history_recovered_v1')) {
+    var recoveredExtras = [
+      {cardKey:'apple', date:'Jun 8', amount:75, periodIdx:0},
+      {cardKey:'apple', date:'Jun 17', amount:7.5, periodIdx:1},
+      {cardKey:'venmo', date:'Jun 4', amount:42, periodIdx:0},
+      {cardKey:'creditone', date:'Jun 17', amount:235.28, periodIdx:1}
+    ];
+    // Cap One Quicksilver (original) is no longer an active card - goes to orphaned history
+    var oldCapOneKey = 'capone';
+    var isCapOneActive = cardData.find(function(c){return c.key===oldCapOneKey;});
+    if (!isCapOneActive) {
+      orphanedHistory[oldCapOneKey] = orphanedHistory[oldCapOneKey] || {
+        name: 'Cap One Quicksilver',
+        extras: [],
+        addedDate: new Date('2026-06-05').toISOString(),
+        removedDate: new Date('2026-06-22').toISOString()
+      };
+      orphanedHistory[oldCapOneKey].extras.push({date:'Jun 18', amount:394.95, periodIdx:1});
+    } else {
+      recoveredExtras.push({cardKey:oldCapOneKey, date:'Jun 18', amount:394.95, periodIdx:1});
+    }
+
+    recoveredExtras.forEach(function(r){
+      var pidKey = String(r.periodIdx);
+      if (!payments[pidKey]) payments[pidKey] = {};
+      if (!payments[pidKey][r.cardKey]) payments[pidKey][r.cardKey] = {paid:false, scheduledAmt:0, extras:[]};
+      // Avoid exact duplicates
+      var exists = payments[pidKey][r.cardKey].extras.some(function(e){
+        return e.date===r.date && Math.abs(e.amount-r.amount)<0.01;
+      });
+      if (!exists) payments[pidKey][r.cardKey].extras.push({date:r.date, amount:r.amount});
+    });
+
+    saveState();
+    localStorage.setItem('pid_history_recovered_v1', 'true');
+  }
+} catch(e) {}
+
 renderPidBackupStatus();
 renderEditor();
 fullRender();
