@@ -111,8 +111,8 @@
   .pay-row-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
   .pay-row-name{font-size:13px;font-weight:600;}
   .pay-row-apr{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px;}
-  .pay-row-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;}
-  @media(max-width:380px){.pay-row-stats{grid-template-columns:repeat(2,1fr);}}
+  .pay-row-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-bottom:10px;}
+  .pay-row-stats-row2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;}
   .pay-stat-label{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:2px;}
   .pay-stat-val{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;}
   .pay-stat-val.green{color:var(--accent);}
@@ -267,8 +267,10 @@
             <option value="avalanche">Avalanche - Highest APR First</option>
             <option value="snowball">Snowball - Lowest Balance First</option>
             <option value="highbal">Highest Balance First</option>
+            <option value="utilization">Utilization - Highest Util % First</option>
             <option value="custom">Custom - Manual Order</option>
           </select>
+          <div id="customOrderEditor" style="display:none;margin-top:10px;"></div>
         </div>
         <div class="card-editor-list" id="cardEditorBody"></div>
         <div style="margin-top:14px;">
@@ -535,6 +537,14 @@ function getPriorityOrder(bals) {
     // Highest balance first
     withBal.sort(function(a,b){ return bals[b.key]-bals[a.key]; });
     withBal.forEach(function(c){result.push(c.key);});
+  } else if (sortStrategy === 'utilization') {
+    // Highest utilization % first
+    withBal.sort(function(a,b){
+      var utilA = a.limit>0 ? bals[a.key]/a.limit : 0;
+      var utilB = b.limit>0 ? bals[b.key]/b.limit : 0;
+      return utilB - utilA;
+    });
+    withBal.forEach(function(c){result.push(c.key);});
   } else if (sortStrategy === 'custom' && customOrder.length) {
     // Manual order - use customOrder, append any new cards not yet ordered
     customOrder.forEach(function(k){
@@ -798,10 +808,13 @@ function renderSchedule(schedule) {
             pill+
           '</div>'+
           '<div class="pay-row-stats">'+
+            '<div><div class="pay-stat-label">APR</div><div class="pay-stat-val muted">'+c.apr+'%</div></div>'+
             '<div><div class="pay-stat-label">Scheduled</div><div class="pay-stat-val green">'+fmtMoney(scheduled)+'</div></div>'+
-            '<div><div class="pay-stat-label">Interest (est)</div><div class="pay-stat-val red">+'+fmtMoney(int)+'</div></div>'+
+          '</div>'+
+          '<div class="pay-row-stats-row2">'+
+            '<div><div class="pay-stat-label">Interest</div><div class="pay-stat-val red">+'+fmtMoney(int)+'</div></div>'+
             '<div><div class="pay-stat-label">Bal After'+(isProjected?' <span style="color:var(--accent3);font-size:8px;">(proj)</span>':'')+'</div><div class="pay-stat-val muted">'+fmtMoney(bal)+'</div></div>'+
-            '<div><div class="pay-stat-label">Util After</div><div class="pay-stat-val" style="color:'+uColor+'">'+utilPct.toFixed(1)+'%</div></div>'+
+            '<div><div class="pay-stat-label">Util</div><div class="pay-stat-val" style="color:'+uColor+'">'+utilPct.toFixed(1)+'%</div></div>'+
           '</div>'+
           '<div class="payment-actions">'+
             markHtml+
@@ -963,6 +976,67 @@ function toggleLock(i) {
 }
 
 // ── RENDER EDITOR ──────────────────────────────────────────────────────────
+function renderCustomOrderEditor(){
+  var el = document.getElementById('customOrderEditor');
+  if (!el) return;
+  if (sortStrategy !== 'custom') { el.style.display='none'; return; }
+  el.style.display='block';
+
+  // Initialize customOrder with all current cards if empty
+  if (!customOrder.length) {
+    customOrder = cardData.map(function(c){return c.key;});
+  }
+  // Remove any keys no longer in cardData, add any missing ones
+  customOrder = customOrder.filter(function(k){return cardData.find(function(c){return c.key===k;});});
+  cardData.forEach(function(c){ if(!customOrder.includes(c.key)) customOrder.push(c.key); });
+
+  el.innerHTML = '<div class="field-label" style="margin-bottom:8px;">Drag Order (tap arrows to move)</div>';
+  var list = document.createElement('div');
+  list.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+
+  customOrder.forEach(function(key, idx){
+    var c = cardData.find(function(x){return x.key===key;});
+    if (!c) return;
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;';
+    var nameSpan = document.createElement('span');
+    nameSpan.style.cssText = 'font-size:13px;font-weight:600;';
+    nameSpan.textContent = (idx+1)+'. '+c.name;
+    var btnWrap = document.createElement('div');
+    btnWrap.style.cssText = 'display:flex;gap:6px;';
+    var upBtn = document.createElement('button');
+    upBtn.className = 'lnk-btn';
+    upBtn.style.color = idx===0 ? 'var(--muted)' : 'var(--accent)';
+    upBtn.innerHTML = '&#9650;';
+    upBtn.disabled = idx===0;
+    var downBtn = document.createElement('button');
+    downBtn.className = 'lnk-btn';
+    downBtn.style.color = idx===customOrder.length-1 ? 'var(--muted)' : 'var(--accent)';
+    downBtn.innerHTML = '&#9660;';
+    downBtn.disabled = idx===customOrder.length-1;
+    (function(i){
+      upBtn.onclick = function(){
+        if (i===0) return;
+        var tmp = customOrder[i-1];
+        customOrder[i-1] = customOrder[i];
+        customOrder[i] = tmp;
+        saveState(); fullRender();
+      };
+      downBtn.onclick = function(){
+        if (i===customOrder.length-1) return;
+        var tmp = customOrder[i+1];
+        customOrder[i+1] = customOrder[i];
+        customOrder[i] = tmp;
+        saveState(); fullRender();
+      };
+    })(idx);
+    btnWrap.appendChild(upBtn); btnWrap.appendChild(downBtn);
+    row.appendChild(nameSpan); row.appendChild(btnWrap);
+    list.appendChild(row);
+  });
+  el.appendChild(list);
+}
+
 function renderEditor() {
   var body = document.getElementById('cardEditorBody');
   body.innerHTML = '';
@@ -1067,6 +1141,7 @@ function fullRender() {
   renderUtilBars();
   renderSchedule(schedule);
   renderEditor();
+  renderCustomOrderEditor();
   var stratNames = {avalanche:'Avalanche', snowball:'Snowball', highbal:'Highest Balance', custom:'Custom'};
   var subEl = document.getElementById('strategySubtitle');
   if (subEl) subEl.textContent = (stratNames[sortStrategy]||'Avalanche')+' strategy \u00b7 Bi-weekly \u00b7 Starting '+START_DATE.toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'numeric'});
