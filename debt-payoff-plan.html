@@ -1303,62 +1303,83 @@ function getAllExtrasForCard(key){
   return list;
 }
 
+function buildExtraHistoryBox(name, extras, isOrphaned, removedDate, cardKeyForEdit){
+  var total = extras.reduce(function(s,e){return s+e.amount;},0);
+  var boxId = cardKeyForEdit;
+
+  var box = document.createElement('div');
+  box.style.cssText = 'background:var(--surface);border:1px solid '+(isOrphaned?'rgba(255,107,107,0.3)':'var(--border)')+';border-radius:10px;overflow:hidden;';
+
+  var header = document.createElement('div');
+  header.style.cssText = 'padding:12px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;';
+  var removedStr = removedDate ? new Date(removedDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+  header.innerHTML =
+    '<div><div style="font-weight:700;font-size:13px;">'+name+
+      (isOrphaned ? ' <span style="color:#ff6b6b;font-size:10px;font-family:monospace;">&middot; DELETED</span>' : '')+
+    '</div>'+
+    '<div style="font-family:monospace;font-size:11px;color:var(--muted);margin-top:2px;">'+extras.length+' extra'+(extras.length!==1?'s':'')+' &middot; '+fmtMoney(total)+' total'+
+      (isOrphaned ? ' &middot; <span style="color:var(--accent3);">removed '+removedStr+'</span>' : '')+
+    '</div></div>'+
+    '<span style="color:var(--muted);font-size:12px;" id="ehChev_'+boxId+'">&#9662;</span>';
+
+  var body = document.createElement('div');
+  body.id = 'ehBody_'+boxId;
+  body.style.cssText = 'display:none;padding:0 14px 14px;border-top:1px solid var(--border);';
+
+  if (!extras.length) {
+    body.innerHTML = '<div style="color:var(--muted);font-size:12px;padding-top:10px;">No extra payments logged.</div>';
+  } else {
+    var list = document.createElement('div');
+    list.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-top:10px;';
+    extras.forEach(function(e){
+      var row = document.createElement('div');
+      row.id = 'ehEntry_'+boxId+'_'+e.periodIdx+'_'+e.extraIdx;
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border-radius:8px;padding:8px 10px;font-family:monospace;font-size:12px;';
+      var editDelBtns = isOrphaned ? '' :
+        '<button class="lnk-btn" style="color:var(--accent3);margin-left:8px;" onclick="editHistoryExtra(\''+boxId+'\','+e.periodIdx+','+e.extraIdx+')">edit</button>'+
+        '<button class="lnk-btn" style="color:var(--accent2);" onclick="deleteExtra('+e.periodIdx+',\''+boxId+'\','+e.extraIdx+');renderExtraHistory();">del</button>';
+      row.innerHTML =
+        '<span style="color:var(--muted);">'+e.date+'</span>'+
+        '<span style="color:var(--accent3);font-weight:600;flex:1;text-align:center;">'+fmtMoney(e.amount)+'</span>'+
+        '<span style="color:var(--muted);font-size:10px;">Pay '+String(e.periodIdx+1).padStart(2,'0')+'</span>'+
+        editDelBtns;
+      list.appendChild(row);
+    });
+    body.appendChild(list);
+  }
+
+  header.onclick = function(){
+    var open = body.style.display === 'block';
+    body.style.display = open ? 'none' : 'block';
+    var chev = document.getElementById('ehChev_'+boxId);
+    if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
+  };
+
+  box.appendChild(header);
+  box.appendChild(body);
+  return box;
+}
+
 function renderExtraHistory(){
   var container = document.getElementById('extraHistoryList');
   if (!container) return;
   container.innerHTML = '';
 
+  // Active cards first
   cardData.forEach(function(c){
     var extras = getAllExtrasForCard(c.key);
-    var total = extras.reduce(function(s,e){return s+e.amount;},0);
-
-    var box = document.createElement('div');
-    box.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;';
-
-    var header = document.createElement('div');
-    header.style.cssText = 'padding:12px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;';
-    header.innerHTML =
-      '<div><div style="font-weight:700;font-size:13px;">'+c.name+'</div>'+
-      '<div style="font-family:monospace;font-size:11px;color:var(--muted);margin-top:2px;">'+extras.length+' extra'+(extras.length!==1?'s':'')+' &middot; '+fmtMoney(total)+' total</div></div>'+
-      '<span style="color:var(--muted);font-size:12px;" id="ehChev_'+c.key+'">&#9662;</span>';
-
-    var body = document.createElement('div');
-    body.id = 'ehBody_'+c.key;
-    body.style.cssText = 'display:none;padding:0 14px 14px;border-top:1px solid var(--border);';
-
-    if (!extras.length) {
-      body.innerHTML = '<div style="color:var(--muted);font-size:12px;padding-top:10px;">No extra payments logged yet.</div>';
-    } else {
-      var list = document.createElement('div');
-      list.style.cssText = 'display:flex;flex-direction:column;gap:6px;margin-top:10px;';
-      extras.forEach(function(e){
-        var row = document.createElement('div');
-        row.id = 'ehEntry_'+c.key+'_'+e.periodIdx+'_'+e.extraIdx;
-        row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border-radius:8px;padding:8px 10px;font-family:monospace;font-size:12px;';
-        row.innerHTML =
-          '<span style="color:var(--muted);">'+e.date+'</span>'+
-          '<span style="color:var(--accent3);font-weight:600;flex:1;text-align:center;">'+fmtMoney(e.amount)+'</span>'+
-          '<span style="color:var(--muted);font-size:10px;">Pay '+String(e.periodIdx+1).padStart(2,'0')+'</span>'+
-          '<button class="lnk-btn" style="color:var(--accent3);margin-left:8px;" onclick="editHistoryExtra(\''+c.key+'\','+e.periodIdx+','+e.extraIdx+')">edit</button>'+
-          '<button class="lnk-btn" style="color:var(--accent2);" onclick="deleteExtra('+e.periodIdx+',\''+c.key+'\','+e.extraIdx+');renderExtraHistory();">del</button>';
-        list.appendChild(row);
-      });
-      body.appendChild(list);
-    }
-
-    header.onclick = function(){
-      var open = body.style.display === 'block';
-      body.style.display = open ? 'none' : 'block';
-      var chev = document.getElementById('ehChev_'+c.key);
-      if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
-    };
-
-    box.appendChild(header);
-    box.appendChild(body);
-    container.appendChild(box);
+    container.appendChild(buildExtraHistoryBox(c.name, extras, false, null, c.key));
   });
 
-  if (!cardData.length) {
+  // Removed/orphaned cards always at the bottom
+  var orphanKeys = Object.keys(orphanedHistory);
+  orphanKeys.forEach(function(key){
+    var oh = orphanedHistory[key];
+    var extras = oh.extras.map(function(e, idx){ return {date:e.date, amount:e.amount, periodIdx:e.periodIdx, extraIdx:idx}; });
+    container.appendChild(buildExtraHistoryBox(oh.name, extras, true, oh.removedDate, key));
+  });
+
+  if (!cardData.length && !orphanKeys.length) {
     container.innerHTML = '<div style="color:var(--muted);font-size:12px;">No cards yet.</div>';
   }
 }
