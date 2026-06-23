@@ -111,8 +111,7 @@
   .pay-row-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
   .pay-row-name{font-size:13px;font-weight:600;}
   .pay-row-apr{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px;}
-  .pay-row-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-bottom:10px;}
-  .pay-row-stats-row2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px;}
+  .pay-row-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;}
   .pay-stat-label{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:2px;}
   .pay-stat-val{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;}
   .pay-stat-val.green{color:var(--accent);}
@@ -183,12 +182,12 @@
 
 <!-- DEBT PROGRESS -->
 <div class="collapsible-section">
-  <div class="col-header" data-target="secProgress">
+  <div class="col-header collapsed" data-target="secProgress">
     <span class="col-header-label">Debt Progress</span>
     <div class="col-line"></div>
     <span class="col-chevron">&#9662;</span>
   </div>
-  <div class="col-body" id="secProgress">
+  <div class="col-body hidden" id="secProgress">
     <div class="section-card" id="debtProgress"></div>
   </div>
 </div>
@@ -804,17 +803,13 @@ function renderSchedule(schedule) {
       payRows +=
         '<div class="pay-row">'+
           '<div class="pay-row-top">'+
-            '<div><div class="pay-row-name">'+c.name+'</div><div class="pay-row-apr">'+c.apr+'% APR</div></div>'+
+            '<div><div class="pay-row-name">'+c.name+' <span style="color:'+uColor+';font-size:11px;font-weight:600;">&middot; '+utilPct.toFixed(1)+'% util</span></div><div class="pay-row-apr">'+c.apr+'% APR</div></div>'+
             pill+
           '</div>'+
           '<div class="pay-row-stats">'+
-            '<div><div class="pay-stat-label">APR</div><div class="pay-stat-val muted">'+c.apr+'%</div></div>'+
             '<div><div class="pay-stat-label">Scheduled</div><div class="pay-stat-val green">'+fmtMoney(scheduled)+'</div></div>'+
-          '</div>'+
-          '<div class="pay-row-stats-row2">'+
-            '<div><div class="pay-stat-label">Interest</div><div class="pay-stat-val red">+'+fmtMoney(int)+'</div></div>'+
             '<div><div class="pay-stat-label">Bal After'+(isProjected?' <span style="color:var(--accent3);font-size:8px;">(proj)</span>':'')+'</div><div class="pay-stat-val muted">'+fmtMoney(bal)+'</div></div>'+
-            '<div><div class="pay-stat-label">Util</div><div class="pay-stat-val" style="color:'+uColor+'">'+utilPct.toFixed(1)+'%</div></div>'+
+            '<div><div class="pay-stat-label">Interest</div><div class="pay-stat-val red">+'+fmtMoney(int)+'</div></div>'+
           '</div>'+
           '<div class="payment-actions">'+
             markHtml+
